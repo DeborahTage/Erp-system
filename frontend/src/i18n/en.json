@@ -1,0 +1,24 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "search": "Search"
+  },
+  "farm": {
+    "dashboard": "Farm Dashboard",
+    "silos": "Silo Monitoring",
+    "flocks": "Flock Management"
+  },
+  "feed": {
+    "formulation": "Feed Formulation",
+    "recipeName": "Recipe Name",
+    "ingredients": "Composition Matrix"
+  },
+  "compliance": {
+    "haccp": "HACCP Compliance",
+    "traceability": "Batch Traceability"
+  }
+}
