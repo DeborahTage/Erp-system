@@ -38,13 +38,11 @@ public class FinanceTransaction {
     private Long referenceId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private BusinessUnit businessUnit = BusinessUnit.GENERAL;
 
     @Enumerated(EnumType.STRING)
     private AccountCode accountCode;
 
-    @Column(nullable = false)
     private BigDecimal vatAmount = BigDecimal.ZERO;
 
     private String invoiceRef;

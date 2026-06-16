@@ -3,6 +3,7 @@ package com.trustagro.inventory.service;
 import com.trustagro.finance.entity.FinanceTransaction;
 import com.trustagro.finance.entity.TransactionType;
 import com.trustagro.finance.repository.FinanceTransactionRepository;
+import com.trustagro.common.exception.ResourceNotFoundException;
 import com.trustagro.inventory.dto.*;
 import com.trustagro.inventory.entity.*;
 import com.trustagro.inventory.repository.*;
@@ -100,7 +101,8 @@ public class InventoryService {
 
     @Transactional
     public Map<String, Object> stockIn(Long itemId, Double quantity, Map<String, Object> data, User user) {
-        InventoryItem item = itemRepository.findById(itemId).orElseThrow();
+        InventoryItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inventory item not found: " + itemId));
 
         StockBatch batch = new StockBatch();
         batch.setItem(item);
@@ -182,7 +184,8 @@ public class InventoryService {
 
     @Transactional
     public Map<String, Object> stockOut(Long itemId, Double quantity, String reason, Long referenceId, User user) {
-        InventoryItem item = itemRepository.findById(itemId).orElseThrow();
+        InventoryItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inventory item not found: " + itemId));
         List<StockBatch> batches = batchRepository.findAvailableBatchesFEFO(itemId, LocalDate.now());
 
         double remaining = quantity;
@@ -307,7 +310,8 @@ public class InventoryService {
 
     @Transactional
     public Map<String, Object> recordCount(Long itemId, Double countedQty, User user) {
-        InventoryItem item = itemRepository.findById(itemId).orElseThrow();
+        InventoryItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inventory item not found: " + itemId));
 
         InventoryCount count = new InventoryCount();
         count.setItem(item);
@@ -330,7 +334,8 @@ public class InventoryService {
 
     @Transactional
     public Map<String, Object> generateForecast(Long itemId) {
-        InventoryItem item = itemRepository.findById(itemId).orElseThrow();
+        InventoryItem item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Inventory item not found: " + itemId));
 
         // Get 90 days of SALE movements as a proxy for demand
         List<StockMovement> sales = movementRepository.findRecentSalesByItemId(itemId, LocalDate.now().minusDays(90).atStartOfDay());

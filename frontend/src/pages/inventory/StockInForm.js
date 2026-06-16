@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { ArrowLeft, Package, Truck, Calendar, Tag, DollarSign, Activity, Save, X, Info, FileStack } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -15,6 +16,8 @@ import PageHeader from '../../components/shared/PageHeader';
 
 const StockInForm = () => {
   const { t } = useLanguage();
+  const { canPerformAction } = useAuth();
+  const canStockIn = canPerformAction('stockIn', 'inventoryItems');
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({
@@ -33,13 +36,22 @@ const StockInForm = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    inventoryApi.getItems().then(r => setItems(r.data.data || []));
-    api.get('/api/inventory/suppliers').then(r => setSuppliers(r.data.data || []));
+    inventoryApi.getItems().then(r => setItems(Array.isArray(r.data) ? r.data : r.data.data || [])).catch(() => {});
+    api.get('/api/inventory/suppliers').then(r => setSuppliers(Array.isArray(r.data) ? r.data : r.data.data || [])).catch(() => {});
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canStockIn) {
+      setError('Your account does not have permission to record stock-in. Please log in as a Store Keeper.');
+      return;
+    }
+    if (!form.itemId || !form.quantity || Number(form.quantity) <= 0) {
+      setError('Select an item and enter a quantity greater than zero.');
+      return;
+    }
     setLoading(true);
+    setError('');
     try {
       await inventoryApi.stockIn({
         ...form,
@@ -51,7 +63,15 @@ const StockInForm = () => {
       toast.success('Stock-in transaction successfully recorded');
       navigate('/inventory');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to process transaction');
+      const status = err.response?.status;
+      const apiMessage = err.response?.data?.message || err.response?.data?.error;
+      if (status === 403) {
+        setError(apiMessage || 'Access denied. Stock-in requires the Store Keeper role.');
+      } else if (status === 401) {
+        setError('Your session has expired. Please log in again.');
+      } else {
+        setError(apiMessage || 'Failed to process transaction');
+      }
     } finally { setLoading(false); }
   };
 

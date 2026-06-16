@@ -1,5 +1,6 @@
 package com.trustagro.inventory.controller;
 
+import com.trustagro.inventory.dto.InventoryItemResponse;
 import com.trustagro.inventory.entity.InventoryItem;
 import com.trustagro.inventory.entity.ItemCategory;
 import com.trustagro.inventory.entity.ItemStatus;
@@ -13,6 +14,7 @@ import com.trustagro.user.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -68,8 +70,15 @@ public class InventoryController {
     // ─── Items ────────────────────────────────────────────────────────────────
 
     @GetMapping("/items")
-    public ResponseEntity<List<InventoryItem>> getAllItems() {
-        return ResponseEntity.ok(itemRepository.findAll());
+    public ResponseEntity<?> getAllItems() {
+        try {
+            List<InventoryItemResponse> result = inventoryService.getAllItems();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("getAllItems failed", e);
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getClass().getSimpleName() + ": " + e.getMessage()));
+        }
     }
 
     @GetMapping("/items/{id}")
@@ -80,11 +89,13 @@ public class InventoryController {
     }
 
     @PostMapping("/items")
+    @PreAuthorize("hasAnyRole('ADMIN','STORE_KEEPER')")
     public ResponseEntity<InventoryItem> createItem(@RequestBody InventoryItem item) {
         return ResponseEntity.ok(itemRepository.save(item));
     }
 
     @PutMapping("/items/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN','STORE_KEEPER')")
     public ResponseEntity<InventoryItem> updateItem(@PathVariable Long id, @RequestBody InventoryItem item) {
         item.setId(id);
         return ResponseEntity.ok(itemRepository.save(item));
@@ -121,6 +132,7 @@ public class InventoryController {
     // ─── Stock In (FIXED) ─────────────────────────────────────────────────────
 
     @PostMapping("/stock-in")
+    @PreAuthorize("hasRole('STORE_KEEPER')")
     public ResponseEntity<Map<String, Object>> stockIn(@RequestBody Map<String, Object> data, Authentication auth) {
         try {
             // Null-safe field extraction
@@ -160,6 +172,7 @@ public class InventoryController {
     // ─── Stock Out (FIXED) ────────────────────────────────────────────────────
 
     @PostMapping("/stock-out")
+    @PreAuthorize("hasRole('STORE_KEEPER')")
     public ResponseEntity<Map<String, Object>> stockOut(@RequestBody Map<String, Object> data, Authentication auth) {
         try {
             // Null-safe field extraction
@@ -190,6 +203,8 @@ public class InventoryController {
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.warn("STOCK_OUT validation error: {} | body={}", e.getMessage(), data);
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (com.trustagro.common.exception.ResourceNotFoundException e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             log.error("STOCK_OUT_ERROR: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
@@ -244,6 +259,7 @@ public class InventoryController {
     // ─── Cycle Count ──────────────────────────────────────────────────────────
 
     @PostMapping("/count")
+    @PreAuthorize("hasRole('STORE_KEEPER')")
     public ResponseEntity<Map<String, Object>> recordCount(@RequestBody Map<String, Object> data, Authentication auth) {
         try {
             if (data.get("itemId") == null || data.get("countedQty") == null) {

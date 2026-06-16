@@ -64,10 +64,14 @@ public class VeterinaryDashboardService {
     }
 
     private int countLowDrugStock() {
-        return (int) inventoryItemRepo.findAll().stream()
-                .filter(item -> item.getMinimumStockLevel() != null
-                        && stockBatchRepo.getTotalStock(item.getId()) < item.getMinimumStockLevel())
-                .count();
+        try {
+            return (int) inventoryItemRepo.findAll().stream()
+                    .filter(item -> item.getMinimumStockLevel() != null
+                            && stockBatchRepo.getTotalStock(item.getId()) < item.getMinimumStockLevel())
+                    .count();
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private List<Map<String, Object>> buildMortalityTrend(LocalDate start, LocalDate end) {

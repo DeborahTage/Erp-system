@@ -5,6 +5,7 @@ import com.trustagro.veterinary.entity.PrescriptionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -12,4 +13,7 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Long
     List<Prescription> findByStatus(PrescriptionStatus status);
     List<Prescription> findByFarmId(Long farmId);
     List<Prescription> findByFlockId(Long flockId);
+    boolean existsByPrescriptionNumber(String prescriptionNumber);
+    long countByStatus(PrescriptionStatus status);
+    boolean existsByFlockIdAndWithdrawalEndDateAfter(Long flockId, LocalDate date);
 }

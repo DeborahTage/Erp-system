@@ -46,8 +46,13 @@ export const dailyRecordApi = {
   update: (id, data) => api.put(`/api/daily-farm-records/${id}`, data),
 };
 
+const normalizeList = (payload) => (Array.isArray(payload) ? payload : payload?.data || []);
+
 export const inventoryApi = {
-  getItems: () => api.get('/api/inventory/items'),
+  getItems: () => api.get('/api/inventory/items').then((res) => {
+    const items = normalizeList(res.data);
+    return { ...res, data: { data: items } };
+  }),
   getItem: (id) => api.get(`/api/inventory/items/${id}`),
   createItem: (data) => api.post('/api/inventory/items', data),
   updateItem: (id, data) => api.put(`/api/inventory/items/${id}`, data),
@@ -77,6 +82,7 @@ export const supplierApi = {
 };
 
 export const vetApi = {
+  getDashboardStats: () => api.get('/api/vet/dashboard-stats'),
   getVaccinations: () => api.get('/api/vet/vaccinations'),
   createVaccination: (data) => api.post('/api/vet/vaccinations', data),
   completeVaccination: (id) => api.patch(`/api/vet/vaccinations/${id}/complete`),
@@ -84,11 +90,13 @@ export const vetApi = {
   createHealthReport: (data) => api.post('/api/vet/health-reports', data),
   reviewHealthReport: (id, data) => api.patch(`/api/vet/health-reports/${id}/review`, data),
   getDiseaseCases: () => api.get('/api/vet/disease-cases'),
+  getActiveDiseaseCases: () => api.get('/api/vet/disease-cases/active'),
   createDiseaseCase: (data) => api.post('/api/vet/disease-cases', data),
   updateDiseaseCase: (id, data) => api.put(`/api/vet/disease-cases/${id}`, data),
   getTreatments: () => api.get('/api/vet/treatments'),
   createTreatment: (data) => api.post('/api/vet/treatments', data),
-  getPrescriptions: (data) => api.post('/api/vet/prescriptions', data),
+  getPrescriptions: () => api.get('/api/vet/prescriptions'),
+  createPrescription: (data) => api.post('/api/vet/prescriptions', data),
   dispensePrescription: (id) => api.patch(`/api/vet/prescriptions/${id}/dispense`),
   getDrugUsageReport: (params) => api.get('/api/vet/reports/drug-usage', { params }),
   getFlockEMR: (flockId) => api.get(`/api/vet/flocks/${flockId}/emr`),
@@ -97,15 +105,16 @@ export const vetApi = {
   setWithdrawal: (flockId, days) => api.post(`/api/vet/flocks/${flockId}/withdrawal`, null, { params: { days } }),
 };
 
+export const veterinaryApi = vetApi;
+
 export const pharmacyApi = {
   getDashboard: () => api.get('/api/pharmacy/dashboard'),
   getCustomers: () => api.get('/api/pharmacy/customers'),
   createCustomer: (data) => api.post('/api/pharmacy/customers', data),
   getSales: () => api.get('/api/pharmacy/sales'),
   createSale: (data) => api.post('/api/pharmacy/sales', data),
-  getPrescriptions: (status) => api.get('/api/prescriptions/pending'), // Modified to match new backend
-  approvePrescription: (id) => api.post(`/api/prescriptions/${id}/approve`),
-  dispensePrescription: (id) => api.post(`/api/prescriptions/${id}/dispense`),
+  getPrescriptions: () => api.get('/api/vet/prescriptions'),
+  dispensePrescription: (id) => api.patch(`/api/vet/prescriptions/${id}/dispense`),
   getReceipt: (id) => api.get(`/api/pharmacy/sales/${id}/receipt`),
 };
 

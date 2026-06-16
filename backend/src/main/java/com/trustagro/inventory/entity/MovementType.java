@@ -9,5 +9,6 @@ public enum MovementType {
     RETURN,
     EXPIRED,
     DAMAGED,
-    COUNT
+    COUNT,
+    INTERNAL_CONSUMPTION
 }

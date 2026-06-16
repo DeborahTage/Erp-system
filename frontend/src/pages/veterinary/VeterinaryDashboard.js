@@ -12,41 +12,46 @@ import { Progress } from '../../components/ui/progress';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+} from '../../components/ui/table';
 import { useNavigate } from 'react-router-dom';
-import { veterinaryApi } from '../../api';
+import { vetApi } from '../../api';
 
 const VeterinaryDashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     activeCases: 0,
-    withdrawalFlocks: 0,
-    vaccinationCompliance: 85,
-    todayVaccinations: 0,
+    vaccinationsDueThisWeek: 0,
+    mortalityRate7Day: 0,
+    drugStockAlerts: 0,
     mortalityTrend: [],
-    recentCases: []
+    diseaseBreakdown: [],
+    recentCases: [],
+    alerts: [],
+    loading: true,
   });
 
   useEffect(() => {
-    // Fetch stats from backend (Mocked for layout until API updated)
-    setStats({
-      activeCases: 4,
-      withdrawalFlocks: 2,
-      vaccinationCompliance: 92,
-      todayVaccinations: 5,
-      mortalityTrend: [
-        { day: 'Mon', rate: 0.12 },
-        { day: 'Tue', rate: 0.15 },
-        { day: 'Wed', rate: 0.08 },
-        { day: 'Thu', rate: 0.22 },
-        { day: 'Fri', rate: 0.18 },
-        { day: 'Sat', rate: 0.10 },
-        { day: 'Sun', rate: 0.05 },
-      ],
-      recentCases: [
-        { id: 1, batch: 'FLK-2024-001', disease: 'Newcastle', severity: 'HIGH', status: 'ACTIVE' },
-        { id: 2, batch: 'FLK-2024-005', disease: 'Coccidiosis', severity: 'MEDIUM', status: 'ACTIVE' },
-      ]
-    });
+    vetApi.getDashboardStats()
+      .then((res) => {
+        const data = res.data?.data || {};
+        setStats({
+          activeCases: data.activeDiseaseCases || 0,
+          vaccinationsDueThisWeek: data.vaccinationsDueThisWeek || 0,
+          mortalityRate7Day: data.mortalityRate7Day || 0,
+          drugStockAlerts: data.drugStockAlerts || 0,
+          mortalityTrend: (data.mortalityTrend || []).map((p) => ({
+            day: p.date,
+            rate: p.mortality,
+          })),
+          diseaseBreakdown: data.diseaseBreakdown || [],
+          recentCases: data.recentDiseaseCases || [],
+          alerts: data.alerts || [],
+          loading: false,
+        });
+      })
+      .catch(() => setStats((s) => ({ ...s, loading: false })));
   }, []);
 
   return (

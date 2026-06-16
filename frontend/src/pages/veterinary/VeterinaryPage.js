@@ -90,6 +90,9 @@ const VeterinaryPage = () => {
       setTreatments(treatmentsRes.data.data || []);
       setPrescriptions(prescriptionsRes.data.data || []);
       fetchBiosecurityLogs();
+    }).catch((err) => {
+      console.error('Failed to load veterinary data', err);
+      toast.error('Could not load veterinary data. Please refresh or try again.');
     }).finally(() => setLoading(false));
   }, []);
 

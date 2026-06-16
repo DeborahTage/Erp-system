@@ -22,9 +22,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
 import { ScrollArea } from '../../components/ui/scroll-area';
 import { Separator } from '../../components/ui/separator';
+import { useAuth } from '../../context/AuthContext';
 
 const InventoryDashboard = () => {
   const { t } = useLanguage();
+  const { canPerformAction } = useAuth();
+  const canStockIn = canPerformAction('stockIn', 'inventoryItems');
+  const canStockOut = canPerformAction('stockOut', 'inventoryItems');
   const navigate = useNavigate();
   const [data, setData] = useState({
     total_skus: 0,
@@ -173,7 +177,9 @@ const InventoryDashboard = () => {
                   </CardTitle>
                   <CardDescription>Latest material receipts and batch deployments</CardDescription>
                 </div>
+                {canStockIn && (
                 <Button variant="ghost" size="sm" onClick={() => navigate('/inventory/stock-in')}>View All</Button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -303,6 +309,7 @@ const InventoryDashboard = () => {
               <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Command Center</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-3 pb-6">
+              {canStockIn && (
               <Button
                 variant="outline"
                 className="h-20 flex flex-col gap-2 hover:border-indigo-500 hover:bg-indigo-50 border-slate-200 shadow-none bg-white"
@@ -311,6 +318,8 @@ const InventoryDashboard = () => {
                 <PlusCircle className="h-5 w-5 text-indigo-600" />
                 <span className="text-[11px] font-bold">STOCK IN</span>
               </Button>
+              )}
+              {canStockOut && (
               <Button
                 variant="outline"
                 className="h-20 flex flex-col gap-2 hover:border-rose-500 hover:bg-rose-50 border-slate-200 shadow-none bg-white"
@@ -319,6 +328,7 @@ const InventoryDashboard = () => {
                 <MinusCircle className="h-5 w-5 text-rose-600" />
                 <span className="text-[11px] font-bold">STOCK OUT</span>
               </Button>
+              )}
               <Button
                 variant="outline"
                 className="h-20 flex flex-col gap-2 hover:border-blue-500 hover:bg-blue-50 border-slate-200 shadow-none bg-white"

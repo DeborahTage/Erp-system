@@ -1,6 +1,7 @@
 package com.trustagro.notification.entity;
 
 import com.trustagro.user.entity.Role;
+import com.trustagro.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -58,5 +59,6 @@ public class Notification {
     public void setRelatedId(Long relatedId) { this.relatedId = relatedId; }
     public boolean isRead() { return isRead; }
     public void setRead(boolean isRead) { this.isRead = isRead; }
+    public void setTargetUser(User user) { this.targetUserId = user != null ? user.getId() : null; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

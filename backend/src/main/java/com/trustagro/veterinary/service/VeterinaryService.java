@@ -485,13 +485,7 @@ public class VeterinaryService {
         if (dc.getFlock() != null && dc.getDateDetected() != null) {
             LocalDate end = dc.getDateResolved() != null ? dc.getDateResolved() : LocalDate.now();
             Integer deaths = dailyFarmRecordRepository.sumMortalityBetweenAndFlock(dc.getDateDetected(), end, dc.getFlock().getId());
-            if (deaths != null && deaths > 0) {
-                dc.setNumberDead(deaths);
-                diseaseCaseRepo.save(dc); // Persist updated count
-                r.setNumberDead(deaths);
-            } else {
-                r.setNumberDead(dc.getNumberDead());
-            }
+            r.setNumberDead(deaths != null && deaths > 0 ? deaths : dc.getNumberDead());
         } else {
             r.setNumberDead(dc.getNumberDead());
         }

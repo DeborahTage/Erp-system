@@ -95,6 +95,13 @@ public class Prescription {
     public LocalDate getWithdrawalEndDate() { return withdrawalEndDate; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public Long getInventoryItemId() { return inventoryItem != null ? inventoryItem.getId() : null; }
+    public void setInventoryItemId(Long inventoryItemId) {
+        if (inventoryItemId != null) {
+            this.inventoryItem = new com.trustagro.inventory.entity.InventoryItem();
+            this.inventoryItem.setId(inventoryItemId);
+        }
+    }
     public String getFrequency() { return frequency; }
     public Integer getDurationDays() { return durationDays; }
     public PrescriptionPriority getPriority() { return priority; }

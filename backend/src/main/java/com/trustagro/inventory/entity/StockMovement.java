@@ -52,7 +52,7 @@ public class StockMovement {
     private User scannedBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by", nullable = false)
+    @JoinColumn(name = "created_by")
     private User createdBy;
 
     @CreationTimestamp

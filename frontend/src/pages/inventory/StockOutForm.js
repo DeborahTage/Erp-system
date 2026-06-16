@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 import { ArrowLeft, ArrowDownRight, Building2, User, FileText, Calendar, Box, Tag, Save, X, Info, Layers, Stethoscope, Syringe } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -15,6 +16,8 @@ import PageHeader from '../../components/shared/PageHeader';
 
 const StockOutForm = () => {
   const { t } = useLanguage();
+  const { canPerformAction } = useAuth();
+  const canStockOut = canPerformAction('stockOut', 'inventoryItems');
   const navigate = useNavigate();
   const location = useLocation();
   const [form, setForm] = useState({
@@ -38,7 +41,7 @@ const StockOutForm = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    inventoryApi.getItems().then(r => setItems(r.data.data || []));
+    inventoryApi.getItems().then(r => setItems(Array.isArray(r.data) ? r.data : r.data.data || [])).catch(() => {});
     farmApi.getAll().then(r => setFarms(r.data.data || []));
     // Fetch prescriptions and vaccinations for medical linking
     api.get('/api/vet/prescriptions').then(r => setPrescriptions(r.data.data || []));
@@ -47,12 +50,22 @@ const StockOutForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canStockOut) {
+      setError('Your account does not have permission to record stock-out. Please log in as a Store Keeper.');
+      return;
+    }
+    if (!form.itemId || !form.quantity || Number(form.quantity) <= 0) {
+      setError('Select an item and enter a quantity greater than zero.');
+      return;
+    }
     setLoading(true);
+    setError('');
     try {
       await inventoryApi.stockOut({
         ...form,
         itemId: Number(form.itemId),
         quantity: Number(form.quantity),
+        reason: form.reason?.trim() || 'ISSUE',
         farmId: form.farmId ? Number(form.farmId) : null,
         referenceId: form.referenceId ? Number(form.referenceId) : null,
         department: form.department || null,
@@ -63,7 +76,19 @@ const StockOutForm = () => {
       toast.success('Stock-out transaction successfully recorded');
       navigate('/inventory');
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to process transaction');
+      const status = err.response?.status;
+      const apiMessage = err.response?.data?.message || err.response?.data?.error;
+      if (status === 403) {
+        setError(apiMessage || 'Access denied. Stock-out requires the Store Keeper role.');
+      } else if (status === 401) {
+        setError('Your session has expired. Please log in again.');
+      } else if (status === 400) {
+        setError(apiMessage || 'Invalid stock-out request. Check quantity and available stock.');
+      } else if (status === 404) {
+        setError(apiMessage || 'Inventory item not found. Please refresh and select the item again.');
+      } else {
+        setError(apiMessage || 'Failed to process transaction');
+      }
     } finally { setLoading(false); }
   };
 

@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080',
-  timeout: 10000,
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8081',
+  timeout: 30000,
 });
 
 api.interceptors.request.use((config) => {
@@ -14,7 +14,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const status = err.response?.status;
+    const message = err.response?.data?.message;
+    if (status === 401 || (status === 403 && message === 'Authentication required')) {
       localStorage.clear();
       window.location.href = '/login';
     }
