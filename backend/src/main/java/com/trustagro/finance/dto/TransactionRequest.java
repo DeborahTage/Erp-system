@@ -19,6 +19,7 @@ public class TransactionRequest {
     @Size(max = 80)
     private String department;
     private Long farmId;
+    private Long flockId;
     private Long clientId;
     @Size(max = 60)
     private String referenceType;

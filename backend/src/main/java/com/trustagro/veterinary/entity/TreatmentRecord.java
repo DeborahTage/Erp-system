@@ -39,6 +39,9 @@ public class TreatmentRecord {
     private LocalDate startDate;
     private LocalDate endDate;
 
+    @Enumerated(EnumType.STRING)
+    private TreatmentStatus status = TreatmentStatus.ACTIVE;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vet_officer")
     private User vetOfficer;

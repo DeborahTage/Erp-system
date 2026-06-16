@@ -71,6 +71,7 @@ public class FinanceService {
         t.setAmount(amount);
         t.setDescription(description);
         t.setFarmId(farmId);
+        t.setFlockId(flockId);
         t.setClientId(clientId);
         t.setReferenceType(referenceType);
         t.setReferenceId(referenceId);
@@ -107,6 +108,7 @@ public class FinanceService {
         t.setPaymentMethod(req.getPaymentMethod());
         t.setDepartment(req.getDepartment());
         t.setFarmId(req.getFarmId());
+        t.setFlockId(req.getFlockId());
         t.setClientId(req.getClientId());
         t.setReferenceType(req.getReferenceType());
         t.setReferenceId(req.getReferenceId());
@@ -123,6 +125,7 @@ public class FinanceService {
         r.setPaymentMethod(t.getPaymentMethod());
         r.setDepartment(t.getDepartment());
         r.setFarmId(t.getFarmId());
+        r.setFlockId(t.getFlockId());
         r.setClientId(t.getClientId());
         r.setReferenceType(t.getReferenceType());
         r.setReferenceId(t.getReferenceId());

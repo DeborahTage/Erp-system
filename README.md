@@ -62,7 +62,7 @@ These commands are for troubleshooting only. The normal day-to-day workflow is `
 
 ```bash
 cd backend
-mvn spring-boot:run -Dspring-boot.run.profiles=local
+mvn --% spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 The backend starts on **http://localhost:8082** in local mode.

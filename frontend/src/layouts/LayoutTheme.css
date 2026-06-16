@@ -1,0 +1,141 @@
+.app-shell-main {
+  margin-left: 240px;
+  background: linear-gradient(180deg, #f5f1eb 0%, #edf1f4 100%);
+}
+
+.vet-app-shell-main {
+  background: linear-gradient(180deg, #f4fbf8 0%, #ebf4f0 100%);
+}
+
+.vet-app-shell-content {
+  background:
+    radial-gradient(circle at top right, rgba(76, 163, 134, 0.08), transparent 28%),
+    transparent;
+}
+
+.sidebar-panel {
+  background: linear-gradient(180deg, #2f343a 0%, #3a4047 100%);
+}
+
+.sidebar-panel-vet {
+  background: linear-gradient(180deg, #141b2d 0%, #1a2438 52%, #22304a 100%);
+  box-shadow: 10px 0 28px rgba(10, 16, 28, 0.22);
+}
+
+.sidebar-brand-block {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.sidebar-panel-vet .sidebar-brand-block {
+  border-bottom-color: rgba(151, 180, 227, 0.16);
+}
+
+.sidebar-brand {
+  color: #f3f3f3;
+}
+
+.sidebar-brand-muted {
+  color: #d4d4d4;
+}
+
+.sidebar-panel-vet .sidebar-brand {
+  color: #f5f8ff;
+}
+
+.sidebar-panel-vet .sidebar-brand-muted {
+  color: #aab9d6;
+}
+
+.sidebar-nav-link {
+  color: #f1f1f1;
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sidebar-nav-link:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-nav-link-active {
+  background-color: #2d8a57;
+  color: #ffffff !important;
+}
+
+.sidebar-panel-vet .sidebar-nav-link {
+  color: #dbe5f7;
+}
+
+.sidebar-panel-vet .sidebar-nav-link:hover {
+  color: #ffffff;
+  background: rgba(110, 142, 197, 0.16);
+}
+
+.sidebar-panel-vet .sidebar-nav-link-active {
+  background: linear-gradient(135deg, #2d8b77 0%, #3ba98b 100%);
+  box-shadow: 0 12px 24px rgba(20, 91, 77, 0.24);
+}
+
+.sidebar-offcanvas-body-vet {
+  background: linear-gradient(180deg, #141b2d 0%, #22304a 100%);
+}
+
+.topbar-shell {
+  background: #ffffff !important;
+}
+
+.vet-topbar-shell {
+  background: rgba(247, 252, 250, 0.97) !important;
+  border-bottom-color: #d9ebe4 !important;
+  box-shadow: 0 10px 28px rgba(18, 58, 49, 0.05);
+}
+
+.topbar-title {
+  color: #2d5843;
+  letter-spacing: 0.01em;
+}
+
+.vet-topbar-title {
+  color: #174d41;
+}
+
+.topbar-action-button,
+.topbar-notification-button {
+  border-radius: 0.8rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vet-topbar-action-button {
+  background: #eef7f4 !important;
+  border-color: #bfdad2 !important;
+  color: #1b584a !important;
+}
+
+.vet-topbar-action-button:hover,
+.vet-topbar-action-button:focus,
+.vet-topbar-action-button:active,
+.vet-topbar-action-button.btn:first-child:active {
+  background: #e0f0eb !important;
+  border-color: #9fc8bc !important;
+  color: #14493d !important;
+}
+
+.vet-topbar-notification-button {
+  background: #f8fcfa !important;
+  border-color: #cfe3dc !important;
+  color: #1e5b4d !important;
+}
+
+.vet-topbar-notification-button:hover,
+.vet-topbar-notification-button:focus,
+.vet-topbar-notification-button:active,
+.vet-topbar-notification-button.btn:first-child:active {
+  background: #edf7f3 !important;
+  border-color: #b8d7cc !important;
+  color: #154d40 !important;
+}
+
+@media (max-width: 991.98px) {
+  .app-shell-main {
+    margin-left: 0;
+  }
+}

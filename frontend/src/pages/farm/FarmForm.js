@@ -16,14 +16,22 @@ const FarmForm = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    userApi.getAll().then(r => setManagers(r.data.data?.filter(u => u.role === 'FARM_MANAGER') || []));
-    if (isEdit) {
-      farmApi.getById(id).then(r => {
-        const f = r.data.data;
-        setForm({ farmName: f.farmName, location: f.location || '', farmType: f.farmType, capacity: f.capacity || '', assignedFarmManagerId: f.assignedFarmManagerId || '' });
+    userApi.getAll()
+      .then((r) => setManagers(r.data.data?.filter((u) => u.role === 'FARM_MANAGER') || []))
+      .catch((err) => {
+        setManagers([]);
+        setError(err.response?.data?.message || t('farmEditForm.error'));
       });
+
+    if (isEdit) {
+      farmApi.getById(id)
+        .then((r) => {
+          const f = r.data.data;
+          setForm({ farmName: f.farmName, location: f.location || '', farmType: f.farmType, capacity: f.capacity || '', assignedFarmManagerId: f.assignedFarmManagerId || '' });
+        })
+        .catch((err) => setError(err.response?.data?.message || t('farmEditForm.error')));
     }
-  }, [id]);
+  }, [id, isEdit, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

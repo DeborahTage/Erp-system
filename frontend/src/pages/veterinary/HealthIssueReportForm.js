@@ -27,16 +27,35 @@ const HealthIssueReportForm = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    farmApi.getAll().then((r) => setFarms(r.data.data?.filter((farm) => farm.status === 'ACTIVE') || []));
-  }, []);
+    farmApi.getAll()
+      .then((r) => {
+        const activeFarms = r.data.data?.filter((farm) => farm.status === 'ACTIVE') || [];
+        setFarms(activeFarms);
+        if (!dailyRecord?.farmId && activeFarms.length === 1) {
+          setForm((prev) => ({ ...prev, farmId: String(activeFarms[0].id) }));
+        }
+      })
+      .catch((err) => setError(err.response?.data?.message || t('healthReportForm.error')));
+  }, [dailyRecord?.farmId, t]);
 
   useEffect(() => {
     if (form.farmId) {
-      flockApi.getAll().then((r) => setFlocks(r.data.data?.filter((flock) => String(flock.farmId) === String(form.farmId) && flock.status === 'ACTIVE') || []));
+      flockApi.getAll()
+        .then((r) => {
+          const activeFlocks = r.data.data?.filter((flock) => String(flock.farmId) === String(form.farmId) && flock.status === 'ACTIVE') || [];
+          setFlocks(activeFlocks);
+          if (!dailyRecord?.flockId && activeFlocks.length === 1) {
+            setForm((prev) => ({ ...prev, flockId: String(activeFlocks[0].id) }));
+          }
+        })
+        .catch((err) => {
+          setFlocks([]);
+          setError(err.response?.data?.message || t('healthReportForm.error'));
+        });
     } else {
       setFlocks([]);
     }
-  }, [form.farmId]);
+  }, [dailyRecord?.flockId, form.farmId, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -69,7 +88,7 @@ const HealthIssueReportForm = () => {
           <Form onSubmit={handleSubmit}>
             <Row className="g-3">
               <Col md={6}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.farm')}</Form.Label><Form.Select value={form.farmId} onChange={(e) => setForm((prev) => ({ ...prev, farmId: e.target.value, flockId: '' }))} required><option value="">{t('forms.selectFarm')}</option>{farms.map((farm) => <option key={farm.id} value={farm.id}>{farm.farmName}</option>)}</Form.Select></Form.Group></Col>
-              <Col md={6}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.flock')}</Form.Label><Form.Select value={form.flockId} onChange={(e) => setForm((prev) => ({ ...prev, flockId: e.target.value }))} required><option value="">{t('forms.selectFlock')}</option>{flocks.map((flock) => <option key={flock.id} value={flock.id}>{flock.batchCode}</option>)}</Form.Select></Form.Group></Col>
+              <Col md={6}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.flock')}</Form.Label><Form.Select value={form.flockId} onChange={(e) => setForm((prev) => ({ ...prev, flockId: e.target.value }))} required disabled={!form.farmId}><option value="">{form.farmId ? t('forms.selectFlock') : 'Select farm first'}</option>{flocks.map((flock) => <option key={flock.id} value={flock.id}>{flock.batchCode}</option>)}</Form.Select></Form.Group></Col>
               <Col md={4}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.reportDate')}</Form.Label><Form.Control type="date" value={form.reportDate} onChange={(e) => setForm((prev) => ({ ...prev, reportDate: e.target.value }))} /></Form.Group></Col>
               <Col md={4}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.mortalityObserved')}</Form.Label><Form.Control type="number" min="0" value={form.mortalityObserved} onChange={(e) => setForm((prev) => ({ ...prev, mortalityObserved: e.target.value }))} /></Form.Group></Col>
               <Col md={4}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.numberAffected')}</Form.Label><Form.Control type="number" min="0" value={form.numberAffected} onChange={(e) => setForm((prev) => ({ ...prev, numberAffected: e.target.value }))} /></Form.Group></Col>

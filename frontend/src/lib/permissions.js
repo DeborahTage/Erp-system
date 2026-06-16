@@ -97,6 +97,10 @@ export const PERMISSIONS = {
   CREATE_ADVISORY_REPORTS: 'create_advisory_reports',
   MANAGE_FOLLOW_UPS: 'manage_follow_ups',
 
+  // Training permissions
+  VIEW_TRAINING: 'view_training',
+  MANAGE_TRAINING: 'manage_training',
+
   // Reports permissions
   VIEW_REPORTS: 'view_reports',
   EXPORT_REPORTS: 'export_reports',
@@ -147,6 +151,8 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_FINANCE,
     PERMISSIONS.VIEW_FINANCIAL_REPORTS,
     PERMISSIONS.VIEW_CRM,
+    PERMISSIONS.VIEW_TRAINING,
+    PERMISSIONS.MANAGE_TRAINING,
     PERMISSIONS.VIEW_REPORTS,
     PERMISSIONS.EXPORT_REPORTS,
     PERMISSIONS.VIEW_SETTINGS,
@@ -185,6 +191,7 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_FINANCE,
     PERMISSIONS.VIEW_FINANCIAL_REPORTS,
     PERMISSIONS.VIEW_CRM,
+    PERMISSIONS.VIEW_TRAINING,
     PERMISSIONS.VIEW_REPORTS,
     PERMISSIONS.EXPORT_REPORTS,
     PERMISSIONS.VIEW_SETTINGS,
@@ -219,6 +226,8 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.VIEW_INVENTORY,
     PERMISSIONS.VIEW_INVENTORY_REPORTS,
     PERMISSIONS.VIEW_USERS,
+    PERMISSIONS.VIEW_TRAINING,
+    PERMISSIONS.MANAGE_TRAINING,
     PERMISSIONS.VIEW_NOTIFICATIONS,
   ],
   
@@ -351,6 +360,7 @@ export const canAccessModule = (role, module) => {
     pharmacy: [PERMISSIONS.VIEW_PHARMACY],
     finance: [PERMISSIONS.VIEW_FINANCE],
     crm: [PERMISSIONS.VIEW_CRM],
+    training: [PERMISSIONS.VIEW_TRAINING],
     reports: [PERMISSIONS.VIEW_REPORTS],
     settings: [PERMISSIONS.VIEW_SETTINGS],
   };
@@ -378,6 +388,7 @@ export const canPerformAction = (role, action, module) => {
       expenses: PERMISSIONS.CREATE_EXPENSES,
       farmVisits: PERMISSIONS.CREATE_FARM_VISITS,
       customers: PERMISSIONS.MANAGE_CUSTOMERS,
+      training: PERMISSIONS.MANAGE_TRAINING,
     },
     stockIn: {
       inventoryItems: PERMISSIONS.STOCK_IN,
@@ -399,6 +410,7 @@ export const canPerformAction = (role, action, module) => {
       expenses: PERMISSIONS.EDIT_EXPENSES,
       farmVisits: PERMISSIONS.EDIT_FARM_VISITS,
       customers: PERMISSIONS.MANAGE_CLIENTS,
+      training: PERMISSIONS.MANAGE_TRAINING,
     },
     delete: {
       users: PERMISSIONS.DELETE_USERS,
@@ -413,6 +425,7 @@ export const canPerformAction = (role, action, module) => {
       income: PERMISSIONS.DELETE_INCOME,
       expenses: PERMISSIONS.DELETE_EXPENSES,
       farmVisits: PERMISSIONS.DELETE_FARM_VISITS,
+      training: PERMISSIONS.MANAGE_TRAINING,
     },
     stockIn: {
       inventoryItems: PERMISSIONS.STOCK_IN,

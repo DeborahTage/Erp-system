@@ -178,6 +178,14 @@ public class VeterinaryService {
         return toTreatmentResponse(treatmentRepo.save(t));
     }
 
+    public List<TreatmentResponse> getRecentTreatments(int limit) {
+        return treatmentRepo.findAll(Sort.by(Sort.Order.desc("createdAt")))
+                .stream()
+                .limit(limit)
+                .map(this::toTreatmentResponse)
+                .collect(Collectors.toList());
+    }
+
     // Prescriptions
     public List<PrescriptionResponse> getAllPrescriptions() {
         return prescriptionRepo.findAll().stream().map(this::toPrescriptionResponse).collect(Collectors.toList());
@@ -233,7 +241,7 @@ public class VeterinaryService {
         return r;
     }
 
-    private DiseaseCaseResponse toDiseaseCaseResponse(DiseaseCase dc) {
+    public DiseaseCaseResponse toDiseaseCaseResponse(DiseaseCase dc) {
         DiseaseCaseResponse r = new DiseaseCaseResponse();
         r.setId(dc.getId());
         if (dc.getFarm() != null) { r.setFarmId(dc.getFarm().getId()); r.setFarmName(dc.getFarm().getFarmName()); }

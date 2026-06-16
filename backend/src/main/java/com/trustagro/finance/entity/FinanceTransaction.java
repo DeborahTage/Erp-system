@@ -32,6 +32,7 @@ public class FinanceTransaction {
 
     private String department;
     private Long farmId;
+    private Long flockId;
     private Long clientId;
     private String referenceType;
     private Long referenceId;

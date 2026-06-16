@@ -34,6 +34,14 @@ public class Flock {
 
     private LocalDate expectedEndDate;
 
+    private String sourceHatchery;
+
+    private String breed;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "barn_id")
+    private Barn barn;
+
     @Enumerated(EnumType.STRING)
     private FlockStatus status = FlockStatus.ACTIVE;
 

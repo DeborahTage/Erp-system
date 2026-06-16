@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Badge, Button, ListGroup, Navbar, Offcanvas, Spinner } from 'react-bootstrap';
 import { notificationApi } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { formatDate } from '../utils';
+import { formatDate, ROLES } from '../utils';
 
 const BellIcon = () => (
   <svg
@@ -17,8 +19,25 @@ const BellIcon = () => (
   </svg>
 );
 
+const LogoutIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    aria-hidden="true"
+    style={{ width: 18, height: 18, stroke: 'currentColor', fill: 'none', strokeWidth: 1.9 }}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M9 6V4.5A1.5 1.5 0 0 1 10.5 3h7A1.5 1.5 0 0 1 19 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 9 19.5V18" />
+    <path d="M14 12H5" />
+    <path d="m8 9-3 3 3 3" />
+  </svg>
+);
+
 const TopBar = ({ onMenuToggle }) => {
+  const navigate = useNavigate();
+  const { logout, hasRole } = useAuth();
   const { t } = useLanguage();
+  const isVeterinaryTheme = hasRole(ROLES.VETERINARY_OFFICER);
   const [unread, setUnread] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -60,17 +79,34 @@ const TopBar = ({ onMenuToggle }) => {
     } catch {}
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <>
-      <Navbar bg="white" className="border-bottom px-3 py-2" style={{ marginLeft: 0 }}>
+      <Navbar
+        bg="white"
+        className={`border-bottom px-3 py-2 topbar-shell ${isVeterinaryTheme ? 'vet-topbar-shell' : ''}`}
+        style={{ marginLeft: 0 }}
+      >
         <Button variant="outline-secondary" size="sm" className="d-lg-none me-2" onClick={onMenuToggle}>
           {t('topbar.menu')}
         </Button>
-        <span className="fw-semibold" style={{ color: '#2d5843', letterSpacing: '0.01em' }}>{t('topbar.title')}</span>
+        <span className={`fw-semibold topbar-title ${isVeterinaryTheme ? 'vet-topbar-title' : ''}`}>{t('topbar.title')}</span>
         <div className="ms-auto d-flex align-items-center gap-2">
           <Button
+            variant="outline-secondary"
+            className={`d-inline-flex align-items-center gap-2 topbar-action-button ${isVeterinaryTheme ? 'vet-topbar-action-button' : ''}`}
+            onClick={handleLogout}
+          >
+            <LogoutIcon />
+            <span>{t('sidebar.logout')}</span>
+          </Button>
+          <Button
             variant="light"
-            className="position-relative border d-inline-flex align-items-center justify-content-center"
+            className={`position-relative border d-inline-flex align-items-center justify-content-center topbar-notification-button ${isVeterinaryTheme ? 'vet-topbar-notification-button' : ''}`}
             style={{ width: 44, height: 40 }}
             onClick={handleOpenNotifications}
             aria-label={t('topbar.openNotifications')}

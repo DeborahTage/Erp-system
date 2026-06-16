@@ -15,15 +15,23 @@ const VaccinationForm = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    farmApi.getAll().then((r) => setFarms(r.data.data?.filter((f) => f.status === 'ACTIVE') || []));
-  }, []);
+    farmApi.getAll()
+      .then((r) => setFarms(r.data.data?.filter((f) => f.status === 'ACTIVE') || []))
+      .catch((err) => setError(err.response?.data?.message || t('vaccinationForm.error')));
+  }, [t]);
 
-  const handleFarmChange = (farmId) => {
-    setForm((f) => ({ ...f, farmId, flockId: '' }));
-    if (farmId) {
-      flockApi.getAll().then((r) => setFlocks(r.data.data?.filter((f) => String(f.farmId) === String(farmId) && f.status === 'ACTIVE') || []));
+  useEffect(() => {
+    if (form.farmId) {
+      flockApi.getAll()
+        .then((r) => setFlocks(r.data.data?.filter((f) => String(f.farmId) === String(form.farmId) && f.status === 'ACTIVE') || []))
+        .catch((err) => {
+          setFlocks([]);
+          setError(err.response?.data?.message || t('vaccinationForm.error'));
+        });
+    } else {
+      setFlocks([]);
     }
-  };
+  }, [form.farmId, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,7 +55,7 @@ const VaccinationForm = () => {
           {error && <Alert variant="danger" className="py-2 small">{error}</Alert>}
           <Form onSubmit={handleSubmit}>
             <Row className="g-3">
-              <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('vaccinationForm.farm')}</Form.Label><Form.Select value={form.farmId} onChange={(e) => handleFarmChange(e.target.value)} required><option value="">{t('forms.select')}</option>{farms.map((f) => <option key={f.id} value={f.id}>{f.farmName}</option>)}</Form.Select></Form.Group></Col>
+              <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('vaccinationForm.farm')}</Form.Label><Form.Select value={form.farmId} onChange={(e) => setForm((f) => ({ ...f, farmId: e.target.value, flockId: '' }))} required><option value="">{t('forms.select')}</option>{farms.map((f) => <option key={f.id} value={f.id}>{f.farmName}</option>)}</Form.Select></Form.Group></Col>
               <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('vaccinationForm.flock')}</Form.Label><Form.Select value={form.flockId} onChange={(e) => setForm({ ...form, flockId: e.target.value })} required><option value="">{t('forms.select')}</option>{flocks.map((f) => <option key={f.id} value={f.id}>{f.batchCode}</option>)}</Form.Select></Form.Group></Col>
               <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('vaccinationForm.vaccineName')}</Form.Label><Form.Control value={form.vaccineName} onChange={(e) => setForm({ ...form, vaccineName: e.target.value })} required /></Form.Group></Col>
               <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('vaccinationForm.diseaseProtectedAgainst')}</Form.Label><Form.Control value={form.diseaseProtectedAgainst} onChange={(e) => setForm({ ...form, diseaseProtectedAgainst: e.target.value })} /></Form.Group></Col>

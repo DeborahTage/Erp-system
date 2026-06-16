@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface InventoryItemRepository extends JpaRepository<InventoryItem, Long> {
     List<InventoryItem> findByStatus(ItemStatus status);
+
+    boolean existsBySku(String sku);
 }

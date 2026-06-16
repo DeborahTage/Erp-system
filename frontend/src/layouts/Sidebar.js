@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ROLES } from '../utils';
@@ -26,7 +26,6 @@ const sidebarStyles = {
   panel: {
     width: 238,
     height: '100vh',
-    background: 'linear-gradient(180deg, #2f343a 0%, #3a4047 100%)',
     fontFamily: '"Times New Roman", Times, serif',
     overflow: 'hidden'
   },
@@ -39,15 +38,12 @@ const sidebarStyles = {
     lineHeight: 1.1
   },
   activeNavLink: {
-    backgroundColor: '#2d8a57',
     color: '#ffffff'
   },
   brand: {
-    color: '#f3f3f3',
     fontFamily: '"Times New Roman", Times, serif'
   },
   muted: {
-    color: '#d4d4d4',
     fontFamily: '"Times New Roman", Times, serif'
   }
 };
@@ -179,6 +175,18 @@ const menuItems = [
     )
   },
   {
+    path: '/training',
+    labelKey: 'training',
+    roles: [ROLES.ADMIN, ROLES.GENERAL_MANAGER, ROLES.OPERATIONS_MANAGER],
+    icon: (
+      <>
+        <path d="M4 7.5 12 4l8 3.5-8 3.5-8-3.5Z" />
+        <path d="M7 10.5V15c0 1.3 2.2 2.5 5 2.5s5-1.2 5-2.5v-4.5" />
+        <path d="M20 8v6" />
+      </>
+    )
+  },
+  {
     path: '/reports',
     labelKey: 'reports',
     roles: [ROLES.ADMIN, ROLES.GENERAL_MANAGER, ROLES.OPERATIONS_MANAGER],
@@ -193,23 +201,20 @@ const menuItems = [
 ];
 
 const Sidebar = ({ show, onHide }) => {
-  const navigate = useNavigate();
-  const { hasRole, logout } = useAuth();
+  const { hasRole } = useAuth();
   const { t } = useLanguage();
+  const isVeterinaryTheme = hasRole(ROLES.VETERINARY_OFFICER);
 
   const visibleItems = menuItems.filter((item) => !item.roles || hasRole(...item.roles));
 
-  const handleLogout = () => {
-    logout();
-    if (onHide) onHide();
-    navigate('/login', { replace: true });
-  };
-
   const sidebarContent = (
-    <div className="d-flex flex-column h-100" style={sidebarStyles.panel}>
-      <div className="p-3 border-bottom">
-        <div className="fw-bold fs-6" style={sidebarStyles.brand}>{t('sidebar.brand')}</div>
-        <div className="small" style={sidebarStyles.muted}>{t('sidebar.tagline')}</div>
+    <div
+      className={`d-flex flex-column h-100 sidebar-panel ${isVeterinaryTheme ? 'sidebar-panel-vet' : ''}`}
+      style={sidebarStyles.panel}
+    >
+      <div className="p-3 sidebar-brand-block">
+        <div className="fw-bold fs-6 sidebar-brand" style={sidebarStyles.brand}>{t('sidebar.brand')}</div>
+        <div className="small sidebar-brand-muted" style={sidebarStyles.muted}>{t('sidebar.tagline')}</div>
       </div>
       <Nav className="flex-column flex-grow-1 p-2 overflow-auto">
         {visibleItems.map((item) => (
@@ -217,34 +222,19 @@ const Sidebar = ({ show, onHide }) => {
             key={item.path}
             to={item.path}
             onClick={onHide}
-            className="nav-link rounded mb-1 px-2 py-2 d-flex align-items-center"
+            className={({ isActive }) => (
+              `nav-link rounded mb-1 px-2 py-2 d-flex align-items-center sidebar-nav-link ${isActive ? 'sidebar-nav-link-active' : ''}`
+            )}
             style={({ isActive }) => ({
               ...sidebarStyles.navLink,
               gap: '0.15rem',
-              ...(isActive ? sidebarStyles.activeNavLink : { color: '#f1f1f1' })
+              ...(isActive ? sidebarStyles.activeNavLink : {})
             })}
           >
             <Icon>{item.icon}</Icon>
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t(`sidebar.${item.labelKey}`)}</span>
           </NavLink>
         ))}
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="nav-link rounded mb-1 px-2 py-2 d-flex align-items-center text-start border-0 bg-transparent"
-          style={{
-            ...sidebarStyles.navLink,
-            color: '#f1f1f1',
-            gap: '0.15rem'
-          }}
-        >
-          <Icon>
-            <path d="M9 6V4.5A1.5 1.5 0 0 1 10.5 3h7A1.5 1.5 0 0 1 19 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 9 19.5V18" />
-            <path d="M14 12H5" />
-            <path d="m8 9-3 3 3 3" />
-          </Icon>
-          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t('sidebar.logout')}</span>
-        </button>
       </Nav>
     </div>
   );
@@ -252,13 +242,15 @@ const Sidebar = ({ show, onHide }) => {
   return (
     <>
       <div
-        className="d-none d-lg-flex flex-column bg-white border-end"
+        className="d-none d-lg-flex flex-column border-end"
         style={{ ...sidebarStyles.panel, position: 'fixed', top: 0, left: 0, zIndex: 100 }}
       >
         {sidebarContent}
       </div>
       <Offcanvas show={show} onHide={onHide} className="d-lg-none" style={{ width: 238 }}>
-        <Offcanvas.Body className="p-0" style={{ background: sidebarStyles.panel.background }}>{sidebarContent}</Offcanvas.Body>
+        <Offcanvas.Body className={`p-0 ${isVeterinaryTheme ? 'sidebar-offcanvas-body-vet' : ''}`}>
+          {sidebarContent}
+        </Offcanvas.Body>
       </Offcanvas>
     </>
   );

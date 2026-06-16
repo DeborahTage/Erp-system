@@ -32,14 +32,25 @@ const PrescriptionForm = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    farmApi.getAll().then((r) => setFarms(r.data.data?.filter((farm) => farm.status === 'ACTIVE') || []));
-    crmApi.getClients().then((r) => setClients(r.data.data || []));
-    inventoryApi.getItems().then((r) => setInventoryItems(r.data.data?.filter((item) => item.status === 'ACTIVE') || []));
+    Promise.allSettled([farmApi.getAll(), crmApi.getClients(), inventoryApi.getItems()]).then(([farmsRes, clientsRes, inventoryRes]) => {
+      setFarms(farmsRes.status === 'fulfilled' ? farmsRes.value.data.data?.filter((farm) => farm.status === 'ACTIVE') || [] : []);
+      setClients(clientsRes.status === 'fulfilled' ? clientsRes.value.data.data || [] : []);
+      setInventoryItems(inventoryRes.status === 'fulfilled' ? inventoryRes.value.data.data?.filter((item) => item.status === 'ACTIVE') || [] : []);
+      const rejectedResult = [farmsRes, clientsRes, inventoryRes].find((result) => result.status === 'rejected');
+      if (rejectedResult) {
+        setError(rejectedResult.reason?.response?.data?.message || t('prescriptionForm.error'));
+      }
+    });
   }, []);
 
   useEffect(() => {
     if (form.farmId) {
-      flockApi.getAll().then((r) => setFlocks(r.data.data?.filter((flock) => String(flock.farmId) === String(form.farmId) && flock.status === 'ACTIVE') || []));
+      flockApi.getAll()
+        .then((r) => setFlocks(r.data.data?.filter((flock) => String(flock.farmId) === String(form.farmId) && flock.status === 'ACTIVE') || []))
+        .catch((err) => {
+          setFlocks([]);
+          setError(err.response?.data?.message || t('prescriptionForm.error'));
+        });
     } else {
       setFlocks([]);
     }

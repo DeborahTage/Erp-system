@@ -12,11 +12,15 @@ import java.util.List;
 
 public interface FinanceTransactionRepository extends JpaRepository<FinanceTransaction, Long> {
     List<FinanceTransaction> findByTransactionType(TransactionType type);
+
     List<FinanceTransaction> findByTransactionDateBetween(LocalDate from, LocalDate to);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinanceTransaction t WHERE t.transactionType = :type")
     BigDecimal sumByType(@Param("type") TransactionType type);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinanceTransaction t WHERE t.transactionType = :type AND t.transactionDate BETWEEN :from AND :to")
-    BigDecimal sumByTypeAndDateRange(@Param("type") TransactionType type, @Param("from") LocalDate from, @Param("to") LocalDate to);
+    BigDecimal sumByTypeAndDateRange(@Param("type") TransactionType type, @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
+
+    List<FinanceTransaction> findByFlockId(Long flockId);
 }

@@ -26,15 +26,23 @@ const DiseaseCaseForm = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    farmApi.getAll().then((r) => setFarms(r.data.data?.filter((farm) => farm.status === 'ACTIVE') || []));
-  }, []);
+    farmApi.getAll()
+      .then((r) => setFarms(r.data.data?.filter((farm) => farm.status === 'ACTIVE') || []))
+      .catch((err) => setError(err.response?.data?.message || t('diseaseCaseForm.error')));
+  }, [t]);
 
-  const handleFarmChange = (farmId) => {
-    setForm((prev) => ({ ...prev, farmId, flockId: '' }));
-    if (farmId) {
-      flockApi.getAll().then((r) => setFlocks(r.data.data?.filter((flock) => String(flock.farmId) === String(farmId) && flock.status === 'ACTIVE') || []));
+  useEffect(() => {
+    if (form.farmId) {
+      flockApi.getAll()
+        .then((r) => setFlocks(r.data.data?.filter((flock) => String(flock.farmId) === String(form.farmId) && flock.status === 'ACTIVE') || []))
+        .catch((err) => {
+          setFlocks([]);
+          setError(err.response?.data?.message || t('diseaseCaseForm.error'));
+        });
+    } else {
+      setFlocks([]);
     }
-  };
+  }, [form.farmId, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -73,7 +81,7 @@ const DiseaseCaseForm = () => {
           {error && <Alert variant="danger" className="py-2 small">{error}</Alert>}
           <Form onSubmit={handleSubmit}>
             <Row className="g-3">
-              <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('diseaseCaseForm.farm')}</Form.Label><Form.Select value={form.farmId} onChange={(e) => handleFarmChange(e.target.value)} required><option value="">{t('forms.select')}</option>{farms.map((f) => <option key={f.id} value={f.id}>{f.farmName}</option>)}</Form.Select></Form.Group></Col>
+              <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('diseaseCaseForm.farm')}</Form.Label><Form.Select value={form.farmId} onChange={(e) => setForm((prev) => ({ ...prev, farmId: e.target.value, flockId: '' }))} required><option value="">{t('forms.select')}</option>{farms.map((f) => <option key={f.id} value={f.id}>{f.farmName}</option>)}</Form.Select></Form.Group></Col>
               <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('diseaseCaseForm.flock')}</Form.Label><Form.Select value={form.flockId} onChange={(e) => setForm({ ...form, flockId: e.target.value })} required><option value="">{t('forms.select')}</option>{flocks.map((f) => <option key={f.id} value={f.id}>{f.batchCode}</option>)}</Form.Select></Form.Group></Col>
               <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('diseaseCaseForm.dateDetected')}</Form.Label><Form.Control type="date" value={form.dateDetected} onChange={(e) => setForm({ ...form, dateDetected: e.target.value })} /></Form.Group></Col>
               <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('diseaseCaseForm.suspectedDisease')}</Form.Label><Form.Control value={form.suspectedDisease} onChange={(e) => setForm({ ...form, suspectedDisease: e.target.value })} /></Form.Group></Col>

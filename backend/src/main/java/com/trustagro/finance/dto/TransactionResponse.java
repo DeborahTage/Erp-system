@@ -17,6 +17,7 @@ public class TransactionResponse {
     private PaymentMethod paymentMethod;
     private String department;
     private Long farmId;
+    private Long flockId;
     private Long clientId;
     private String referenceType;
     private Long referenceId;

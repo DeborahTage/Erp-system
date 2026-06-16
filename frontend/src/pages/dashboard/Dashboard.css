@@ -24,6 +24,107 @@
   overflow: hidden;
 }
 
+.vet-dashboard-theme .dashboard-title {
+  color: #17362d;
+}
+
+.vet-dashboard-theme .dashboard-subtitle {
+  color: #6c7e77;
+}
+
+.vet-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-content: start;
+}
+
+.vet-dashboard-card {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 4.8rem;
+  padding: 1rem 1.1rem;
+  border-radius: 0.7rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(249, 253, 251, 0.98) 100%);
+  border: 1px solid #d8e7e1;
+  box-shadow: 0 10px 22px rgba(24, 54, 45, 0.07);
+}
+
+.vet-dashboard-card-copy {
+  min-width: 0;
+}
+
+.vet-dashboard-card-title {
+  color: #698077;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  margin-bottom: 0.35rem;
+}
+
+.vet-dashboard-card-value {
+  color: #102a24;
+  font-size: 1.85rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.vet-dashboard-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.55rem;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.vet-dashboard-card.is-blue .vet-dashboard-card-icon {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.vet-dashboard-card.is-red .vet-dashboard-card-icon {
+  color: #d24e64;
+  background: rgba(210, 78, 100, 0.09);
+}
+
+.vet-dashboard-card.is-orange .vet-dashboard-card-icon {
+  color: #d07a29;
+  background: rgba(208, 122, 41, 0.09);
+}
+
+.vet-dashboard-card.is-purple .vet-dashboard-card-icon {
+  color: #7c5cd6;
+  background: rgba(124, 92, 214, 0.09);
+}
+
+.vet-dashboard-card.is-blue {
+  border-color: #dbe9f8;
+}
+
+.vet-dashboard-card.is-red {
+  border-color: #f2d6db;
+}
+
+.vet-dashboard-card.is-orange {
+  border-color: #f5dfc6;
+}
+
+.vet-dashboard-card.is-purple {
+  border-color: #e2dcf6;
+}
+
+.vet-dashboard-grid .vet-dashboard-card:nth-child(4) {
+  grid-column: 1;
+}
+
+.vet-dashboard-grid .vet-dashboard-card:nth-child(5) {
+  grid-column: 2;
+}
+
 @media (min-width: 1200px) {
   .dashboard-page .col-lg-3 {
     flex: 0 0 auto;
@@ -34,5 +135,36 @@
 @media (min-width: 1200px) {
   .dashboard-page .row {
     --bs-gutter-y: 0.65rem;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .vet-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vet-dashboard-grid .vet-dashboard-card:nth-child(4),
+  .vet-dashboard-grid .vet-dashboard-card:nth-child(5) {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .vet-dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .vet-dashboard-card {
+    min-height: 4.3rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .vet-dashboard-card-title {
+    font-size: 0.68rem;
+  }
+
+  .vet-dashboard-card-value {
+    font-size: 1.55rem;
   }
 }

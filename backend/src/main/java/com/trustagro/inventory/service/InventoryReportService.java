@@ -33,7 +33,7 @@ public class InventoryReportService {
         BigDecimal totalValue = BigDecimal.ZERO;
         
         List<Map<String, Object>> itemValuations = items.stream().map(item -> {
-            List<StockBatch> batches = batchRepository.findByItemIdOrderByReceivedDateAsc(item.getId());
+            List<StockBatch> batches = batchRepository.findByItemIdOrderByDateReceivedAsc(item.getId());
             BigDecimal itemValue = batches.stream()
                     .map(b -> (b.getUnitCost() != null ? b.getUnitCost() : BigDecimal.ZERO)
                             .multiply(BigDecimal.valueOf(b.getQuantityRemaining() != null ? b.getQuantityRemaining() : 0.0)))

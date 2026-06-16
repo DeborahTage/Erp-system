@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Data
 public class InventoryItemResponse {
     private Long id;
+    private String sku;
     private String itemName;
     private ItemCategory category;
     private ItemUnit unit;

@@ -40,6 +40,7 @@ public class InventoryService {
 
     public InventoryItemResponse createItem(InventoryItemRequest req) {
         InventoryItem item = new InventoryItem();
+        item.setSku(generateSku(req.getItemName()));
         item.setItemName(req.getItemName());
         item.setCategory(req.getCategory());
         item.setUnit(req.getUnit());
@@ -183,6 +184,7 @@ public class InventoryService {
     public InventoryItemResponse toItemResponse(InventoryItem item) {
         InventoryItemResponse r = new InventoryItemResponse();
         r.setId(item.getId());
+        r.setSku(item.getSku());
         r.setItemName(item.getItemName());
         r.setCategory(item.getCategory());
         r.setUnit(item.getUnit());
@@ -212,5 +214,23 @@ public class InventoryService {
         response.setMovementDate(movement.getMovementDate());
         response.setCreatedAt(movement.getCreatedAt());
         return response;
+    }
+
+    private String generateSku(String itemName) {
+        String base = itemName == null ? "ITEM" : itemName
+                .trim()
+                .toUpperCase()
+                .replaceAll("[^A-Z0-9]+", "-")
+                .replaceAll("^-+|-+$", "");
+        if (base.isBlank()) {
+            base = "ITEM";
+        }
+
+        String candidate = base;
+        int suffix = 1;
+        while (itemRepository.existsBySku(candidate)) {
+            candidate = base + "-" + suffix++;
+        }
+        return candidate;
     }
 }

@@ -9,6 +9,11 @@ import java.util.List;
 
 public interface VaccinationScheduleRepository extends JpaRepository<VaccinationSchedule, Long> {
     List<VaccinationSchedule> findByStatus(VaccinationStatus status);
+
     List<VaccinationSchedule> findByScheduledDateBeforeAndStatus(LocalDate date, VaccinationStatus status);
+
     List<VaccinationSchedule> findByScheduledDateAfterAndStatus(LocalDate date, VaccinationStatus status);
+
+    List<VaccinationSchedule> findByScheduledDateBetweenAndStatus(LocalDate startDate, LocalDate endDate,
+            VaccinationStatus status);
 }

@@ -92,6 +92,22 @@ export const crmApi = {
   getFollowUps: () => api.get('/api/crm/follow-ups'),
 };
 
+export const trainingApi = {
+  getSummary: () => api.get('/api/training/summary'),
+  getTrainers: () => api.get('/api/training/trainers'),
+  getTrainer: (id) => api.get(`/api/training/trainers/${id}`),
+  createTrainer: (data) => api.post('/api/training/trainers', data),
+  updateTrainer: (id, data) => api.put(`/api/training/trainers/${id}`, data),
+  getSessions: () => api.get('/api/training/sessions'),
+  getSession: (id) => api.get(`/api/training/sessions/${id}`),
+  createSession: (data) => api.post('/api/training/sessions', data),
+  updateSession: (id, data) => api.put(`/api/training/sessions/${id}`, data),
+  getParticipants: (params) => api.get('/api/training/participants', { params }),
+  getParticipant: (id) => api.get(`/api/training/participants/${id}`),
+  createParticipant: (data) => api.post('/api/training/participants', data),
+  updateParticipant: (id, data) => api.put(`/api/training/participants/${id}`, data),
+};
+
 export const notificationApi = {
   getAll: () => api.get('/api/notifications'),
   markRead: (id) => api.patch(`/api/notifications/${id}/read`),

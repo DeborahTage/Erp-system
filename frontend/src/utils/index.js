@@ -25,7 +25,8 @@ export const statusBadge = (status) => {
     SCHEDULED: 'primary', COMPLETED: 'success', MISSED: 'danger',
     LEAD: 'info', LOST: 'danger', LOW: 'success', MODERATE: 'warning',
     HIGH: 'danger', CRITICAL: 'dark', CONTROLLED: 'warning', RESOLVED: 'success',
-    OPEN: 'danger', REVIEWED: 'info',
+    OPEN: 'danger', REVIEWED: 'info', PLANNED: 'primary', ONGOING: 'warning',
+    REGISTERED: 'info', ATTENDED: 'success',
   };
   return map[status] || 'secondary';
 };

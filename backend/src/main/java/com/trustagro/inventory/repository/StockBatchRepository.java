@@ -9,7 +9,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface StockBatchRepository extends JpaRepository<StockBatch, Long> {
-    List<StockBatch> findByItemIdAndQuantityRemainingGreaterThanOrderByExpiryDateAscCreatedAtAsc(Long itemId, Double qty);
+    List<StockBatch> findByItemIdAndQuantityRemainingGreaterThanOrderByExpiryDateAscCreatedAtAsc(Long itemId,
+            Double qty);
 
     @Query("SELECT COALESCE(SUM(b.quantityRemaining), 0) FROM StockBatch b WHERE b.item.id = :itemId AND b.quantityRemaining > 0")
     Double getTotalStock(@Param("itemId") Long itemId);
@@ -19,4 +20,8 @@ public interface StockBatchRepository extends JpaRepository<StockBatch, Long> {
 
     @Query("SELECT b FROM StockBatch b WHERE b.expiryDate IS NOT NULL AND b.expiryDate BETWEEN :today AND :warningDate AND b.quantityRemaining > 0")
     List<StockBatch> findExpiringBatches(@Param("today") LocalDate today, @Param("warningDate") LocalDate warningDate);
+
+    List<StockBatch> findByExpiryDate(LocalDate expiryDate);
+
+    List<StockBatch> findByItemIdOrderByDateReceivedAsc(Long itemId);
 }

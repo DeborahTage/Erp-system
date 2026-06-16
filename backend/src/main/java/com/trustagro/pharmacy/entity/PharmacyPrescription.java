@@ -2,11 +2,11 @@ package com.trustagro.pharmacy.entity;
 
 import com.trustagro.user.entity.User;
 import com.trustagro.veterinary.entity.Prescription;
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -46,8 +46,8 @@ public class PharmacyPrescription {
     @Column(columnDefinition = "TEXT")
     private String diagnosis;
 
-    @Type(JsonBinaryType.class)
-    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json")
     private List<Object> durWarnings;
 
     @Column(precision = 10, scale = 2)

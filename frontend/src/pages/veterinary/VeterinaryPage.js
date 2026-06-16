@@ -7,6 +7,7 @@ import DataTable from '../../components/common/DataTable';
 import StatusBadge from '../../components/common/StatusBadge';
 import { useLanguage } from '../../context/LanguageContext';
 import { formatDate } from '../../utils';
+import './VeterinaryPage.css';
 
 const VeterinaryPage = () => {
   const { t } = useLanguage();
@@ -19,29 +20,45 @@ const VeterinaryPage = () => {
   const [reviewForm, setReviewForm] = useState({ suspectedDiagnosis: '', severity: 'LOW', treatmentPlan: '', status: 'REVIEWED' });
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       vetApi.getVaccinations(),
       vetApi.getHealthReports(),
       vetApi.getDiseaseCases(),
       vetApi.getTreatments(),
       vetApi.getPrescriptions()
-    ]).then(([vaccinationsRes, healthReportsRes, diseaseCasesRes, treatmentsRes, prescriptionsRes]) => {
-      setVaccinations(vaccinationsRes.data.data || []);
-      setHealthReports(healthReportsRes.data.data || []);
-      setDiseaseCases(diseaseCasesRes.data.data || []);
-      setTreatments(treatmentsRes.data.data || []);
-      setPrescriptions(prescriptionsRes.data.data || []);
+    ]).then((results) => {
+      const [
+        vaccinationsRes,
+        healthReportsRes,
+        diseaseCasesRes,
+        treatmentsRes,
+        prescriptionsRes,
+      ] = results;
+
+      setVaccinations(vaccinationsRes.status === 'fulfilled' ? vaccinationsRes.value.data.data || [] : []);
+      setHealthReports(healthReportsRes.status === 'fulfilled' ? healthReportsRes.value.data.data || [] : []);
+      setDiseaseCases(diseaseCasesRes.status === 'fulfilled' ? diseaseCasesRes.value.data.data || [] : []);
+      setTreatments(treatmentsRes.status === 'fulfilled' ? treatmentsRes.value.data.data || [] : []);
+      setPrescriptions(prescriptionsRes.status === 'fulfilled' ? prescriptionsRes.value.data.data || [] : []);
+
+      const rejectedResult = results.find((result) => result.status === 'rejected');
+      setLoadError(rejectedResult?.reason?.response?.data?.message || (rejectedResult ? 'Some veterinary data could not be loaded.' : ''));
     }).finally(() => setLoading(false));
   }, []);
 
   const completeVaccination = async (id) => {
-    await vetApi.completeVaccination(id);
-    setVaccinations((prev) => prev.map((item) => item.id === id ? { ...item, status: 'COMPLETED' } : item));
-    toast.success(t('veterinary.vaccinationMarkedComplete'));
+    try {
+      await vetApi.completeVaccination(id);
+      setVaccinations((prev) => prev.map((item) => item.id === id ? { ...item, status: 'COMPLETED' } : item));
+      toast.success(t('veterinary.vaccinationMarkedComplete'));
+    } catch (err) {
+      toast.error(err.response?.data?.message || t('veterinary.unableToCompleteVaccination'));
+    }
   };
 
   const openReviewModal = (report) => {
@@ -135,10 +152,11 @@ const VeterinaryPage = () => {
   ];
 
   return (
-    <div>
-      <h5 className="fw-bold mb-3">{t('veterinary.title')}</h5>
+    <div className="veterinary-page">
+      <h5 className="fw-bold mb-3 veterinary-page-title">{t('veterinary.title')}</h5>
+      {loadError && <Alert variant="warning" className="py-2 small">{loadError}</Alert>}
       <Tab.Container defaultActiveKey="vaccinations">
-        <Nav variant="tabs" className="mb-3">
+        <Nav variant="tabs" className="mb-3 veterinary-tabs">
           <Nav.Item><Nav.Link eventKey="vaccinations">{t('veterinary.vaccinations')}</Nav.Link></Nav.Item>
           <Nav.Item><Nav.Link eventKey="healthReports">{t('veterinary.healthReports')}</Nav.Link></Nav.Item>
           <Nav.Item><Nav.Link eventKey="disease">{t('veterinary.diseaseCases')}</Nav.Link></Nav.Item>
@@ -148,38 +166,38 @@ const VeterinaryPage = () => {
         <Tab.Content>
           <Tab.Pane eventKey="vaccinations">
             <div className="d-flex justify-content-end mb-2">
-              <Button size="sm" variant="success" onClick={() => navigate('/veterinary/vaccinations/new')}>{t('veterinary.scheduleVaccination')}</Button>
+              <Button size="sm" variant="success" className="veterinary-primary-button" onClick={() => navigate('/veterinary/vaccinations/new')}>{t('veterinary.scheduleVaccination')}</Button>
             </div>
-            <Card className="border-0 shadow-sm"><Card.Body><DataTable columns={vaccinationCols} data={vaccinations} loading={loading} /></Card.Body></Card>
+            <Card className="border-0 shadow-sm veterinary-record-card"><Card.Body><DataTable columns={vaccinationCols} data={vaccinations} loading={loading} /></Card.Body></Card>
           </Tab.Pane>
           <Tab.Pane eventKey="healthReports">
             <div className="d-flex justify-content-between align-items-center mb-2">
               <div className="text-muted small">{t('veterinary.healthReportHelp')}</div>
-              <Button size="sm" variant="danger" onClick={() => navigate('/veterinary/health-reports/new')}>{t('veterinary.newHealthReport')}</Button>
+              <Button size="sm" variant="danger" className="veterinary-danger-button" onClick={() => navigate('/veterinary/health-reports/new')}>{t('veterinary.newHealthReport')}</Button>
             </div>
-            <Card className="border-0 shadow-sm"><Card.Body><DataTable columns={healthReportCols} data={healthReports} loading={loading} /></Card.Body></Card>
+            <Card className="border-0 shadow-sm veterinary-record-card"><Card.Body><DataTable columns={healthReportCols} data={healthReports} loading={loading} /></Card.Body></Card>
           </Tab.Pane>
           <Tab.Pane eventKey="disease">
             <div className="d-flex justify-content-end mb-2">
-              <Button size="sm" variant="success" onClick={() => navigate('/veterinary/disease-cases/new')}>{t('veterinary.recordDiseaseCase')}</Button>
+              <Button size="sm" variant="success" className="veterinary-primary-button" onClick={() => navigate('/veterinary/disease-cases/new')}>{t('veterinary.recordDiseaseCase')}</Button>
             </div>
-            <Card className="border-0 shadow-sm"><Card.Body><DataTable columns={diseaseCols} data={diseaseCases} loading={loading} /></Card.Body></Card>
+            <Card className="border-0 shadow-sm veterinary-record-card"><Card.Body><DataTable columns={diseaseCols} data={diseaseCases} loading={loading} /></Card.Body></Card>
           </Tab.Pane>
           <Tab.Pane eventKey="treatments">
             <div className="d-flex justify-content-end mb-2">
-              <Button size="sm" variant="success" onClick={() => navigate('/veterinary/treatments/new')}>{t('veterinary.recordTreatment')}</Button>
+              <Button size="sm" variant="success" className="veterinary-primary-button" onClick={() => navigate('/veterinary/treatments/new')}>{t('veterinary.recordTreatment')}</Button>
             </div>
-            <Card className="border-0 shadow-sm"><Card.Body><DataTable columns={treatmentCols} data={treatments} loading={loading} /></Card.Body></Card>
+            <Card className="border-0 shadow-sm veterinary-record-card"><Card.Body><DataTable columns={treatmentCols} data={treatments} loading={loading} /></Card.Body></Card>
           </Tab.Pane>
           <Tab.Pane eventKey="prescriptions">
             <div className="d-flex justify-content-end mb-2">
-              <Button size="sm" variant="success" onClick={() => navigate('/veterinary/prescriptions/new')}>{t('veterinary.createPrescription')}</Button>
+              <Button size="sm" variant="success" className="veterinary-primary-button" onClick={() => navigate('/veterinary/prescriptions/new')}>{t('veterinary.createPrescription')}</Button>
             </div>
-            <Card className="border-0 shadow-sm"><Card.Body><DataTable columns={prescriptionCols} data={prescriptions} loading={loading} /></Card.Body></Card>
+            <Card className="border-0 shadow-sm veterinary-record-card"><Card.Body><DataTable columns={prescriptionCols} data={prescriptions} loading={loading} /></Card.Body></Card>
           </Tab.Pane>
         </Tab.Content>
       </Tab.Container>
-      <Modal show={!!selectedReport} onHide={() => setSelectedReport(null)} centered>
+      <Modal show={!!selectedReport} onHide={() => setSelectedReport(null)} centered dialogClassName="veterinary-review-modal">
         <Modal.Header closeButton>
           <Modal.Title>{t('veterinary.reviewHealthReport')}</Modal.Title>
         </Modal.Header>

@@ -12,6 +12,7 @@ export const PATH_MODULE_MAP = {
   '/pharmacy': 'pharmacy',
   '/finance': 'finance',
   '/crm': 'crm',
+  '/training': 'training',
   '/reports': 'reports',
   '/settings': 'settings',
 };
@@ -41,4 +42,10 @@ export const FORM_ROUTE_PERMISSIONS = {
   '/crm/clients/new': PERMISSIONS.MANAGE_CLIENTS,
   '/crm/clients/:id/edit': PERMISSIONS.MANAGE_CLIENTS,
   '/crm/visits/new': PERMISSIONS.CREATE_FARM_VISITS,
+  '/training/trainers/new': PERMISSIONS.MANAGE_TRAINING,
+  '/training/trainers/:id/edit': PERMISSIONS.MANAGE_TRAINING,
+  '/training/sessions/new': PERMISSIONS.MANAGE_TRAINING,
+  '/training/sessions/:id/edit': PERMISSIONS.MANAGE_TRAINING,
+  '/training/participants/new': PERMISSIONS.MANAGE_TRAINING,
+  '/training/participants/:id/edit': PERMISSIONS.MANAGE_TRAINING,
 };

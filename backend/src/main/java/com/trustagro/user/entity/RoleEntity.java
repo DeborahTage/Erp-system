@@ -1,9 +1,9 @@
 package com.trustagro.user.entity;
 
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import lombok.Data;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.List;
 
@@ -19,8 +19,8 @@ public class RoleEntity {
     @Column(unique = true, nullable = false)
     private String name;
 
-    @Type(JsonBinaryType.class)
-    @Column(columnDefinition = "jsonb", nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "json", nullable = false)
     private List<String> permissions;
 
     public List<String> getPermissions() { return permissions; }
