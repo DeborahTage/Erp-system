@@ -36,6 +36,12 @@ public class NotificationService {
                 NotificationType.WARNING, Role.STORE_KEEPER, "INVENTORY", null);
     }
 
+    public void createReorderAlert(String itemName, double currentStock, double reorderPoint, String unit) {
+        create("Reorder Suggestion",
+                String.format("Item: %s - Current stock %.1f %s hit reorder point (%.1f). Draft PR suggested.", itemName, currentStock, unit, reorderPoint),
+                NotificationType.INFO, Role.STORE_KEEPER, "INVENTORY", null);
+    }
+
     public void createExpiryAlert(String itemName, String expiryDate) {
         create("Expiry Alert",
                 String.format("Item: %s expires on %s (within 30 days)", itemName, expiryDate),

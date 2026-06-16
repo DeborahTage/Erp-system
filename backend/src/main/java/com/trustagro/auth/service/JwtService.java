@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class JwtService {
@@ -23,12 +24,36 @@ public class JwtService {
     }
 
     public String generateToken(String email) {
+        return generateToken(email, List.of(), List.of());
+    }
+
+    public String generateToken(String email, List<String> permissions, List<Long> farmIds) {
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
+                .claim("permissions", permissions)
+                .claim("farmIds", farmIds)
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<String> extractPermissions(String token) {
+        Claims claims = Jwts.parserBuilder().setSigningKey(getKey()).build()
+                .parseClaimsJws(token).getBody();
+        Object perms = claims.get("permissions");
+        if (perms instanceof List<?>) return (List<String>) perms;
+        return List.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    public List<Long> extractFarmIds(String token) {
+        Claims claims = Jwts.parserBuilder().setSigningKey(getKey()).build()
+                .parseClaimsJws(token).getBody();
+        Object ids = claims.get("farmIds");
+        if (ids instanceof List<?>) return (List<Long>) ids;
+        return List.of();
     }
 
     public String extractEmail(String token) {

@@ -38,4 +38,25 @@ public class Notification {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    // Explicit accessors
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
+    public NotificationType getType() { return type; }
+    public void setType(NotificationType type) { this.type = type; }
+    public Role getTargetRole() { return targetRole; }
+    public void setTargetRole(Role targetRole) { this.targetRole = targetRole; }
+    public Long getTargetUserId() { return targetUserId; }
+    public void setTargetUserId(Long targetUserId) { this.targetUserId = targetUserId; }
+    public String getRelatedModule() { return relatedModule; }
+    public void setRelatedModule(String relatedModule) { this.relatedModule = relatedModule; }
+    public Long getRelatedId() { return relatedId; }
+    public void setRelatedId(Long relatedId) { this.relatedId = relatedId; }
+    public boolean isRead() { return isRead; }
+    public void setRead(boolean isRead) { this.isRead = isRead; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
 }

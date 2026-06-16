@@ -72,4 +72,41 @@ public class HealthIssueReport {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    public Long getId() { return id; }
+    public Farm getFarm() { return farm; }
+    public Flock getFlock() { return flock; }
+    public DailyFarmRecord getDailyFarmRecord() { return dailyFarmRecord; }
+    public String getSymptoms() { return symptoms; }
+    public Integer getMortalityObserved() { return mortalityObserved; }
+    public Integer getNumberAffected() { return numberAffected; }
+    public String getRemarks() { return remarks; }
+    public User getReportedBy() { return reportedBy; }
+    public LocalDate getReportDate() { return reportDate; }
+    public HealthIssueReportStatus getStatus() { return status; }
+    public String getSuspectedDiagnosis() { return suspectedDiagnosis; }
+    public DiseaseSeverity getSeverity() { return severity; }
+    public String getTreatmentPlan() { return treatmentPlan; }
+    public User getReviewedBy() { return reviewedBy; }
+    public LocalDate getReviewDate() { return reviewDate; }
+    public Long getDiseaseCaseId() { return diseaseCaseId; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public void setFarm(Farm farm) { this.farm = farm; }
+    public void setFlock(Flock flock) { this.flock = flock; }
+    public void setDailyFarmRecord(DailyFarmRecord dailyFarmRecord) { this.dailyFarmRecord = dailyFarmRecord; }
+    public void setSymptoms(String symptoms) { this.symptoms = symptoms; }
+    public void setMortalityObserved(Integer mortalityObserved) { this.mortalityObserved = mortalityObserved; }
+    public void setNumberAffected(Integer numberAffected) { this.numberAffected = numberAffected; }
+    public void setRemarks(String remarks) { this.remarks = remarks; }
+    public void setReportedBy(User reportedBy) { this.reportedBy = reportedBy; }
+    public void setReportDate(LocalDate reportDate) { this.reportDate = reportDate; }
+    public void setStatus(HealthIssueReportStatus status) { this.status = status; }
+    public void setSuspectedDiagnosis(String suspectedDiagnosis) { this.suspectedDiagnosis = suspectedDiagnosis; }
+    public void setSeverity(DiseaseSeverity severity) { this.severity = severity; }
+    public void setTreatmentPlan(String treatmentPlan) { this.treatmentPlan = treatmentPlan; }
+    public void setReviewedBy(User reviewedBy) { this.reviewedBy = reviewedBy; }
+    public void setReviewDate(LocalDate reviewDate) { this.reviewDate = reviewDate; }
+    public void setDiseaseCaseId(Long diseaseCaseId) { this.diseaseCaseId = diseaseCaseId; }
 }

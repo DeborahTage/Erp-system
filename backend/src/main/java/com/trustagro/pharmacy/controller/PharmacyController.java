@@ -1,49 +1,104 @@
 package com.trustagro.pharmacy.controller;
 
-import com.trustagro.common.response.ApiResponse;
-import com.trustagro.pharmacy.dto.*;
+import com.trustagro.pharmacy.dto.PosSaleRequest;
+import com.trustagro.pharmacy.dto.ProcessPrescriptionRequest;
+import com.trustagro.pharmacy.entity.DurAlert;
 import com.trustagro.pharmacy.entity.PharmacyCustomer;
+import com.trustagro.pharmacy.entity.PharmacyPrescription;
+import com.trustagro.pharmacy.entity.PharmacySale;
+import com.trustagro.pharmacy.repository.DurAlertRepository;
+import com.trustagro.pharmacy.repository.PharmacyPrescriptionRepository;
+import com.trustagro.pharmacy.repository.PharmacySaleRepository;
 import com.trustagro.pharmacy.service.PharmacyService;
-import jakarta.validation.Valid;
+import com.trustagro.user.entity.User;
+import com.trustagro.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/pharmacy")
-@RequiredArgsConstructor
 public class PharmacyController {
 
     private final PharmacyService pharmacyService;
+    private final PharmacyPrescriptionRepository rxRepository;
+    private final PharmacySaleRepository saleRepository;
+    private final DurAlertRepository durAlertRepository;
+    private final UserRepository userRepository;
 
-    @GetMapping("/customers")
-    public ResponseEntity<ApiResponse<List<PharmacyCustomer>>> getCustomers() {
-        return ResponseEntity.ok(ApiResponse.success(pharmacyService.getAllCustomers()));
+    public PharmacyController(PharmacyService pharmacyService,
+                              PharmacyPrescriptionRepository rxRepository,
+                              PharmacySaleRepository saleRepository,
+                              DurAlertRepository durAlertRepository,
+                              UserRepository userRepository) {
+        this.pharmacyService = pharmacyService;
+        this.rxRepository = rxRepository;
+        this.saleRepository = saleRepository;
+        this.durAlertRepository = durAlertRepository;
+        this.userRepository = userRepository;
     }
 
-    @PostMapping("/customers")
-    @PreAuthorize("hasAnyRole('ADMIN','PHARMACY_SALES')")
-    public ResponseEntity<ApiResponse<PharmacyCustomer>> createCustomer(@Valid @RequestBody CustomerRequest req) {
-        return ResponseEntity.ok(ApiResponse.success("Customer created", pharmacyService.createCustomer(req)));
+    private User getAuthenticatedUser(Authentication auth) {
+        if (auth == null || auth.getName() == null) return null;
+        return userRepository.findByEmail(auth.getName()).orElse(null);
     }
 
-    @GetMapping("/sales")
-    @PreAuthorize("hasAnyRole('ADMIN','PHARMACY_SALES','FINANCE_OFFICER','GENERAL_MANAGER')")
-    public ResponseEntity<ApiResponse<List<SaleResponse>>> getSales() {
-        return ResponseEntity.ok(ApiResponse.success(pharmacyService.getAllSales()));
+    @GetMapping("/prescriptions")
+    public ResponseEntity<List<PharmacyPrescription>> getPrescriptions(@RequestParam(required = false) String status) {
+        if (status != null) {
+            return ResponseEntity.ok(rxRepository.findByStatus(status));
+        }
+        return ResponseEntity.ok(rxRepository.findAll());
+    }
+
+    @PostMapping("/prescriptions/{id}/process")
+    public ResponseEntity<?> processPrescription(@PathVariable Long id, @RequestBody ProcessPrescriptionRequest req, Authentication auth) {
+        User user = getAuthenticatedUser(auth);
+        PharmacyPrescription rx = pharmacyService.receivePrescription(id, user);
+        return ResponseEntity.ok(Map.of(
+            "prescription", rx,
+            "durWarnings", rx.getDurWarnings() != null ? rx.getDurWarnings() : List.of()
+        ));
     }
 
     @PostMapping("/sales")
-    @PreAuthorize("hasAnyRole('ADMIN','PHARMACY_SALES')")
-    public ResponseEntity<ApiResponse<SaleResponse>> createSale(@Valid @RequestBody SaleRequest req) {
-        return ResponseEntity.ok(ApiResponse.success("Sale completed", pharmacyService.createSale(req)));
+    public ResponseEntity<PharmacySale> createSale(@RequestBody PosSaleRequest request, Authentication auth) {
+        User user = getAuthenticatedUser(auth);
+        PharmacySale sale = pharmacyService.processSale(request, user);
+        return ResponseEntity.ok(sale);
     }
 
-    @GetMapping("/sales/{id}/receipt")
-    public ResponseEntity<ApiResponse<SaleResponse>> getReceipt(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(pharmacyService.getSaleById(id)));
+    @GetMapping("/dashboard")
+    public ResponseEntity<?> getDashboardStats() {
+        return ResponseEntity.ok(pharmacyService.getDashboardStats());
+    }
+
+    @GetMapping("/customers")
+    public ResponseEntity<List<PharmacyCustomer>> getCustomers() {
+        return ResponseEntity.ok(pharmacyService.getAllCustomers());
+    }
+
+    @PostMapping("/customers")
+    public ResponseEntity<PharmacyCustomer> createCustomer(@RequestBody PharmacyCustomer customer) {
+        return ResponseEntity.ok(pharmacyService.saveCustomer(customer));
+    }
+
+    @GetMapping("/dur-alerts")
+    public ResponseEntity<List<DurAlert>> getDurAlerts(@RequestParam(required = false) Boolean resolved) {
+        if (Boolean.FALSE.equals(resolved)) {
+            return ResponseEntity.ok(durAlertRepository.findByResolvedFalse());
+        }
+        return ResponseEntity.ok(durAlertRepository.findAll());
+    }
+
+    @PostMapping("/labels/{rxItemId}")
+    public ResponseEntity<?> generateLabel(@PathVariable Long rxItemId, Authentication auth) {
+        User user = getAuthenticatedUser(auth);
+        return ResponseEntity.ok(pharmacyService.generateLabel(rxItemId, user));
     }
 }

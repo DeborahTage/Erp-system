@@ -18,4 +18,15 @@ public class FarmResponse {
     private FarmStatus status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public void setId(Long id) { this.id = id; }
+    public void setFarmName(String farmName) { this.farmName = farmName; }
+    public void setLocation(String location) { this.location = location; }
+    public void setFarmType(FarmType farmType) { this.farmType = farmType; }
+    public void setCapacity(Integer capacity) { this.capacity = capacity; }
+    public void setAssignedFarmManagerId(Long assignedFarmManagerId) { this.assignedFarmManagerId = assignedFarmManagerId; }
+    public void setAssignedFarmManagerName(String assignedFarmManagerName) { this.assignedFarmManagerName = assignedFarmManagerName; }
+    public void setStatus(FarmStatus status) { this.status = status; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

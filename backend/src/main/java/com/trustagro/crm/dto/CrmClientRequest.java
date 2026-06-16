@@ -22,4 +22,13 @@ public class CrmClientRequest {
     private Integer numberOfBirds;
     private ClientStatus status;
     private Long assignedExtensionWorkerId;
+
+    public String getClientName() { return clientName; }
+    public String getPhone() { return phone; }
+    public String getLocation() { return location; }
+    public String getFarmType() { return farmType; }
+    public String getFarmSize() { return farmSize; }
+    public Integer getNumberOfBirds() { return numberOfBirds; }
+    public ClientStatus getStatus() { return status; }
+    public Long getAssignedExtensionWorkerId() { return assignedExtensionWorkerId; }
 }

@@ -1,211 +1,320 @@
 package com.trustagro.pharmacy.service;
 
-import com.trustagro.common.exception.BusinessException;
-import com.trustagro.common.exception.ResourceNotFoundException;
-import com.trustagro.finance.service.FinanceService;
-import com.trustagro.inventory.dto.StockOutRequest;
-import com.trustagro.inventory.entity.IssuedToType;
-import com.trustagro.inventory.service.InventoryService;
-import com.trustagro.pharmacy.dto.*;
+import com.trustagro.farm.entity.Flock;
+import com.trustagro.finance.entity.FinanceTransaction;
+import com.trustagro.finance.entity.TransactionType;
+import com.trustagro.finance.repository.FinanceTransactionRepository;
+import com.trustagro.inventory.entity.InventoryItem;
+import com.trustagro.inventory.entity.MovementType;
+import com.trustagro.inventory.entity.StockBatch;
+import com.trustagro.inventory.entity.StockMovement;
+import com.trustagro.inventory.repository.InventoryItemRepository;
+import com.trustagro.inventory.repository.StockBatchRepository;
+import com.trustagro.inventory.repository.StockMovementRepository;
+import com.trustagro.pharmacy.dto.PosSaleRequest;
+import com.trustagro.pharmacy.dto.SaleItemDto;
 import com.trustagro.pharmacy.entity.*;
 import com.trustagro.pharmacy.repository.*;
-import com.trustagro.user.repository.UserRepository;
+import com.trustagro.user.entity.User;
 import com.trustagro.veterinary.entity.Prescription;
-import com.trustagro.veterinary.entity.PrescriptionStatus;
 import com.trustagro.veterinary.repository.PrescriptionRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
+import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.trustagro.inventory.service.InventoryService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 public class PharmacyService {
 
-    private final PharmacyCustomerRepository customerRepository;
+    private static final Logger log = LoggerFactory.getLogger(PharmacyService.class);
+
+    private final PharmacyPatientRepository patientRepository;
+    private final PharmacyPrescriptionRepository rxRepository;
+    private final PrescriptionItemRepository rxItemRepository;
     private final PharmacySaleRepository saleRepository;
-    private final DispensingRecordRepository dispensingRecordRepository;
-    private final DrugUsageRecordRepository drugUsageRecordRepository;
-    private final PrescriptionRepository prescriptionRepository;
+    private final DurAlertRepository durAlertRepository;
+    private final PharmacyLabelRepository labelRepository;
+    private final PharmacyCustomerRepository customerRepository;
+    private final PharmacySaleItemRepository saleItemRepository;
+    
+    private final PrescriptionRepository vetRxRepository;
+    private final InventoryItemRepository inventoryItemRepository;
+    private final StockBatchRepository stockBatchRepository;
+    private final StockMovementRepository stockMovementRepository;
+    private final FinanceTransactionRepository financeTransactionRepository;
     private final InventoryService inventoryService;
-    private final FinanceService financeService;
-    private final UserRepository userRepository;
+
+    public PharmacyService(PharmacyPatientRepository patientRepository,
+                           PharmacyPrescriptionRepository rxRepository,
+                           PrescriptionItemRepository rxItemRepository,
+                           PharmacySaleRepository saleRepository,
+                           DurAlertRepository durAlertRepository,
+                           PharmacyLabelRepository labelRepository,
+                           PharmacyCustomerRepository customerRepository,
+                           PharmacySaleItemRepository saleItemRepository,
+                           PrescriptionRepository vetRxRepository,
+                           InventoryItemRepository inventoryItemRepository,
+                           StockBatchRepository stockBatchRepository,
+                           StockMovementRepository stockMovementRepository,
+                           FinanceTransactionRepository financeTransactionRepository,
+                           InventoryService inventoryService) {
+        this.patientRepository = patientRepository;
+        this.rxRepository = rxRepository;
+        this.rxItemRepository = rxItemRepository;
+        this.saleRepository = saleRepository;
+        this.durAlertRepository = durAlertRepository;
+        this.labelRepository = labelRepository;
+        this.customerRepository = customerRepository;
+        this.saleItemRepository = saleItemRepository;
+        this.vetRxRepository = vetRxRepository;
+        this.inventoryItemRepository = inventoryItemRepository;
+        this.stockBatchRepository = stockBatchRepository;
+        this.stockMovementRepository = stockMovementRepository;
+        this.financeTransactionRepository = financeTransactionRepository;
+        this.inventoryService = inventoryService;
+    }
+
+    @Transactional
+    public PharmacyPrescription receivePrescription(Long vetPrescriptionId, User pharmacyUser) {
+        Prescription vetRx = vetRxRepository.findById(vetPrescriptionId)
+                .orElseThrow(() -> new IllegalArgumentException("Vet Prescription not found"));
+
+        PharmacyPatient patient = patientRepository.findByFlockId(vetRx.getFlockId())
+                .orElseGet(() -> {
+                    PharmacyPatient newPatient = new PharmacyPatient();
+                    newPatient.setPatientName("Flock-" + vetRx.getFlockId());
+                    newPatient.setSpecies("Chicken");
+                    return patientRepository.save(newPatient);
+                });
+
+        PharmacyPrescription rx = new PharmacyPrescription();
+        rx.setPrescriptionCode("RX-" + System.currentTimeMillis());
+        rx.setVetPrescription(vetRx);
+        rx.setPatient(patient);
+        rx.setPrescribedBy(vetRx.getCreatedByVet() != null ? vetRx.getCreatedByVet() : pharmacyUser);
+        rx.setDiagnosis("Transferred from Vet Module");
+        rx.setStatus("Pending");
+
+        rx = rxRepository.save(rx);
+        
+        if (vetRx.getInventoryItemId() != null) {
+            InventoryItem drug = inventoryItemRepository.findById(vetRx.getInventoryItemId()).orElse(null);
+            if (drug != null) {
+                PrescriptionItem rxItem = new PrescriptionItem();
+                rxItem.setPrescription(rx);
+                rxItem.setInventoryItem(drug);
+                rxItem.setDosage(vetRx.getDosageInstruction());
+                rxItem.setFrequency(vetRx.getFrequency());
+                rxItem.setDurationDays(vetRx.getDurationDays());
+                rxItem.setQuantityPrescribed(BigDecimal.valueOf(vetRx.getQuantity() != null ? vetRx.getQuantity() : 1.0));
+                rxItemRepository.save(rxItem);
+            }
+        }
+
+        runDUR(rx.getId(), patient.getId());
+        return rx;
+    }
+
+    @Transactional
+    public void runDUR(Long pharmacyRxId, Long patientId) {
+        PharmacyPrescription rx = rxRepository.findById(pharmacyRxId).orElseThrow();
+        List<PrescriptionItem> items = rxItemRepository.findByPrescriptionId(pharmacyRxId);
+        List<Object> warnings = new ArrayList<>();
+        
+        for (PrescriptionItem item : items) {
+            InventoryItem drug = item.getInventoryItem();
+            List<StockBatch> batches = stockBatchRepository.findAvailableBatchesFEFO(drug.getId(), LocalDate.now());
+            if (batches.isEmpty()) {
+                DurAlert alert = new DurAlert();
+                alert.setPrescription(rx);
+                alert.setAlertType("OUT_OF_STOCK");
+                alert.setSeverity("Critical");
+                alert.setMessage(drug.getItemName() + " is out of stock");
+                durAlertRepository.save(alert);
+                warnings.add(Map.of("type", "OUT_OF_STOCK", "severity", "Critical", "message", alert.getMessage()));
+            }
+        }
+        rx.setDurWarnings(warnings);
+        rxRepository.save(rx);
+    }
+
+    @Transactional
+    public PharmacySale processSale(PosSaleRequest request, User user) {
+        PharmacySale sale = new PharmacySale();
+        sale.setSaleCode("SAL-" + System.currentTimeMillis());
+        sale.setSoldBy(user);
+        sale.setPaymentMethod(request.getPaymentMethod());
+        sale.setCustomerName(request.getCustomerName());
+        sale.setCustomerPhone(request.getCustomerPhone());
+
+        PharmacyCustomer customer = null;
+        if (request.getCustomerId() != null) {
+            customer = customerRepository.findById(request.getCustomerId()).orElse(null);
+            if (customer != null) {
+                sale.setCustomer(customer);
+                sale.setCustomerName(customer.getName());
+                sale.setCustomerPhone(customer.getPhone());
+                
+                // Set Price Type based on Customer Type
+                if (customer.getCustomerType() == CustomerType.WHOLESALE) sale.setPriceType(PriceType.WHOLESALE);
+                else if (customer.getCustomerType() == CustomerType.PARTNER_FARM) sale.setPriceType(PriceType.PARTNER);
+                else sale.setPriceType(PriceType.RETAIL);
+            }
+        }
+
+        if (request.getPrescriptionId() != null) {
+            PharmacyPrescription rx = rxRepository.findById(request.getPrescriptionId()).orElse(null);
+            if (rx != null) {
+                sale.setPrescription(rx);
+                sale.setPatient(rx.getPatient());
+                rx.setStatus("Dispensed");
+                rx.setProcessedBy(user);
+                rxRepository.save(rx);
+            }
+        }
+
+        BigDecimal subtotal = BigDecimal.ZERO;
+        List<PharmacySaleItem> saleItems = new ArrayList<>();
+
+        for (SaleItemDto itemDto : request.getItems()) {
+            InventoryItem item = inventoryItemRepository.findById(itemDto.getItemId()).orElseThrow();
+            
+            // PRESCRIPTION GUARD
+            if (Boolean.TRUE.equals(item.getIsControlled()) && sale.getPrescription() == null) {
+                throw new IllegalStateException("Sale blocked: " + item.getItemName() + " requires a prescription.");
+            }
+
+            // Deduct Stock
+            Map<String, Object> outResult = inventoryService.stockOut(
+                itemDto.getItemId(), 
+                itemDto.getQty().doubleValue(), 
+                "PHARMACY_SALE", 
+                null, 
+                user
+            );
+
+            // Tiered Pricing logic
+            BigDecimal unitPrice = item.getRetailPrice();
+            if (sale.getPriceType() == PriceType.WHOLESALE && item.getWholesalePrice() != null) {
+                unitPrice = item.getWholesalePrice();
+            } else if (sale.getPriceType() == PriceType.PARTNER && item.getPartnerPrice() != null) {
+                unitPrice = item.getPartnerPrice();
+            }
+
+            BigDecimal lineTotal = unitPrice.multiply(itemDto.getQty());
+            subtotal = subtotal.add(lineTotal);
+
+            PharmacySaleItem si = new PharmacySaleItem();
+            si.setSale(sale);
+            si.setInventoryItem(item);
+            si.setItemName(item.getItemName());
+            si.setQuantity(itemDto.getQty());
+            si.setUnitPrice(unitPrice);
+            si.setLineTotal(lineTotal);
+            si.setPriceType(sale.getPriceType());
+            
+            // Traceability: attach first batch used if available from inventory result
+            if (outResult.containsKey("batchNumber")) {
+                si.setBatchNumber((String) outResult.get("batchNumber"));
+            }
+
+            saleItems.add(si);
+        }
+
+        BigDecimal tax = subtotal.multiply(BigDecimal.valueOf(0.15));
+        BigDecimal total = subtotal.add(tax);
+
+        sale.setSaleItems(saleItems);
+        sale.setSubtotal(subtotal);
+        sale.setTaxAmount(tax);
+        sale.setTotalAmount(total);
+
+        // Handle Credit Payment
+        if ("CREDIT".equalsIgnoreCase(request.getPaymentMethod()) && customer != null) {
+            BigDecimal newBalance = customer.getOutstandingBalance().add(total);
+            if (customer.getCreditLimit() != null && newBalance.compareTo(customer.getCreditLimit()) > 0) {
+                throw new IllegalStateException("Credit limit exceeded for customer: " + customer.getName());
+            }
+            customer.setOutstandingBalance(newBalance);
+            customerRepository.save(customer);
+            sale.setPaymentStatus(PaymentStatus.CREDIT);
+        }
+
+        PharmacySale savedSale = saleRepository.save(sale);
+
+        // Revenue Log
+        FinanceTransaction ft = new FinanceTransaction();
+        ft.setTransactionType(TransactionType.INCOME);
+        ft.setAmount(total);
+        ft.setCategory("Pharmacy Revenue");
+        ft.setDescription("Sale: " + savedSale.getSaleCode());
+        ft.setRecordedBy(user);
+        ft.setTransactionDate(LocalDate.now());
+        financeTransactionRepository.save(ft);
+
+        return savedSale;
+    }
+
+    public Map<String, Object> getDashboardStats() {
+        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
+        LocalDateTime endOfDay = LocalDateTime.now();
+        
+        List<PharmacySale> todaySales = saleRepository.findSalesBetweenDates(startOfDay, endOfDay);
+        BigDecimal revenueToday = todaySales.stream()
+                .map(PharmacySale::getTotalAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        long pendingRx = rxRepository.countByStatus("Pending");
+        
+        // Mocking trend data for frontend charts
+        List<Map<String, Object>> trend = List.of(
+            Map.of("day", "Mon", "sales", 1200),
+            Map.of("day", "Tue", "sales", 1500),
+            Map.of("day", "Wed", "sales", 1100),
+            Map.of("day", "Thu", "sales", 1800),
+            Map.of("day", "Fri", "sales", revenueToday)
+        );
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("revenue_today", revenueToday);
+        stats.put("sales_count_today", todaySales.size());
+        stats.put("pending_prescriptions", pendingRx);
+        stats.put("revenue_trend", trend);
+        
+        return stats;
+    }
+
+    @Transactional
+    public PharmacyCustomer saveCustomer(PharmacyCustomer customer) {
+        if (customer.getCustomerCode() == null) {
+            customer.setCustomerCode("CUST-" + System.currentTimeMillis());
+        }
+        return customerRepository.save(customer);
+    }
 
     public List<PharmacyCustomer> getAllCustomers() {
         return customerRepository.findAll();
     }
 
-    public PharmacyCustomer createCustomer(CustomerRequest req) {
-        PharmacyCustomer c = new PharmacyCustomer();
-        c.setCustomerName(req.getCustomerName());
-        c.setPhone(req.getPhone());
-        c.setLocation(req.getLocation());
-        c.setCustomerType(req.getCustomerType());
-        return customerRepository.save(c);
-    }
-
-    public List<SaleResponse> getAllSales() {
-        return saleRepository.findAll().stream().map(this::toSaleResponse).collect(Collectors.toList());
-    }
-
     @Transactional
-    public SaleResponse createSale(SaleRequest req) {
-        if (saleRepository.existsByReceiptNumber(req.getReceiptNumber()))
-            throw new BusinessException("Receipt number already exists");
-
-        PharmacySale sale = new PharmacySale();
-        sale.setReceiptNumber(req.getReceiptNumber());
-        sale.setDispensingType(req.getDispensingType() != null ? req.getDispensingType() : DispensingType.EXTERNAL_CUSTOMER_SALE);
-        sale.setSaleDate(req.getSaleDate() != null ? req.getSaleDate() : LocalDate.now());
-        sale.setPaymentMethod(req.getPaymentMethod());
-        sale.setPrescriptionId(req.getPrescriptionId());
-        sale.setFarmId(req.getFarmId());
-        sale.setFlockId(req.getFlockId());
-        sale.setClientId(req.getClientId());
-
-        if (req.getCustomerId() != null)
-            customerRepository.findById(req.getCustomerId()).ifPresent(sale::setCustomer);
-
-        Prescription prescription = null;
-        if (req.getPrescriptionId() != null) {
-            prescription = prescriptionRepository.findById(req.getPrescriptionId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Prescription not found"));
-            if (prescription.getStatus() == PrescriptionStatus.CANCELLED) {
-                throw new BusinessException("Prescription is cancelled");
-            }
-        }
-
-        if (sale.getDispensingType() == DispensingType.INTERNAL_FARM_USE && req.getFarmId() == null) {
-            throw new BusinessException("Internal farm use requires a farm");
-        }
-
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        userRepository.findByEmail(email).ifPresent(sale::setSoldBy);
-
-        BigDecimal total = BigDecimal.ZERO;
-        List<SaleItem> saleItems = new java.util.ArrayList<>();
-        for (SaleItemRequest itemReq : req.getItems()) {
-            StockOutRequest stockOut = new StockOutRequest();
-            stockOut.setItemId(itemReq.getInventoryItemId());
-            stockOut.setQuantity(itemReq.getQuantity());
-            stockOut.setReason((sale.getDispensingType() == DispensingType.INTERNAL_FARM_USE ? "Internal Drug Dispense - " : "Pharmacy Sale - ") + req.getReceiptNumber());
-            stockOut.setIssuedToType(sale.getDispensingType() == DispensingType.INTERNAL_FARM_USE ? IssuedToType.FARM : IssuedToType.CUSTOMER);
-            stockOut.setFarmId(req.getFarmId());
-            stockOut.setReferenceType("PHARMACY_SALE");
-            inventoryService.stockOut(stockOut);
-
-            SaleItem si = new SaleItem();
-            si.setSale(sale);
-            com.trustagro.inventory.entity.InventoryItem invItem = new com.trustagro.inventory.entity.InventoryItem();
-            invItem.setId(itemReq.getInventoryItemId());
-            si.setInventoryItem(invItem);
-            si.setQuantity(itemReq.getQuantity());
-            si.setUnitPrice(itemReq.getUnitPrice());
-            BigDecimal lineTotal = itemReq.getUnitPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity()));
-            si.setTotalPrice(lineTotal);
-            total = total.add(lineTotal);
-            saleItems.add(si);
-        }
-
-        sale.setTotalAmount(total);
-        sale.setItems(saleItems);
-        PharmacySale saved = saleRepository.save(sale);
-
-        if (prescription != null) {
-            prescription.setStatus(PrescriptionStatus.DISPENSED);
-            prescriptionRepository.save(prescription);
-        }
-
-        for (SaleItem item : saleItems) {
-            DispensingRecord record = new DispensingRecord();
-            record.setPrescriptionId(req.getPrescriptionId());
-            record.setDispensingType(sale.getDispensingType());
-            record.setFarmId(req.getFarmId());
-            record.setFlockId(req.getFlockId());
-            record.setCustomerId(req.getCustomerId());
-            record.setClientId(req.getClientId());
-            record.setInventoryItemId(item.getInventoryItem().getId());
-            record.setQuantityDispensed(item.getQuantity());
-            record.setUnitPrice(item.getUnitPrice());
-            record.setTotalAmount(item.getTotalPrice());
-            record.setDispensingDate(saved.getSaleDate());
-            record.setDispensedBy(saved.getSoldBy());
-            dispensingRecordRepository.save(record);
-
-            if (sale.getDispensingType() == DispensingType.INTERNAL_FARM_USE) {
-                DrugUsageRecord usageRecord = new DrugUsageRecord();
-                usageRecord.setFarmId(req.getFarmId());
-                usageRecord.setFlockId(req.getFlockId());
-                usageRecord.setDiseaseCaseId(prescription != null ? prescription.getDiseaseCaseId() : null);
-                usageRecord.setPrescriptionId(req.getPrescriptionId());
-                usageRecord.setInventoryItemId(item.getInventoryItem().getId());
-                usageRecord.setQuantityUsed(item.getQuantity());
-                usageRecord.setPurpose("Internal farm treatment");
-                usageRecord.setUsageDate(saved.getSaleDate());
-                usageRecord.setUsedBy(saved.getSoldBy());
-                drugUsageRecordRepository.save(usageRecord);
-            }
-        }
-
-        if (sale.getDispensingType() == DispensingType.INTERNAL_FARM_USE) {
-            financeService.createAutoFarmDrugExpense(
-                    total,
-                    "Internal farm drug usage - " + req.getReceiptNumber(),
-                    req.getFarmId(),
-                    req.getClientId(),
-                    "PHARMACY_SALE",
-                    saved.getId(),
-                    req.getFlockId()
-            );
-        } else {
-            financeService.createAutoIncome(total, "Pharmacy Sale - " + req.getReceiptNumber(), "PHARMACY_SALE", saved.getId());
-        }
-
-        return toSaleResponse(saved);
-    }
-
-    public SaleResponse getSaleById(Long id) {
-        return toSaleResponse(saleRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Sale not found: " + id)));
-    }
-
-    private SaleResponse toSaleResponse(PharmacySale sale) {
-        SaleResponse r = new SaleResponse();
-        r.setId(sale.getId());
-        r.setReceiptNumber(sale.getReceiptNumber());
-        r.setDispensingType(sale.getDispensingType());
-        r.setFarmId(sale.getFarmId());
-        r.setFlockId(sale.getFlockId());
-        r.setClientId(sale.getClientId());
-        r.setSaleDate(sale.getSaleDate());
-        r.setPaymentMethod(sale.getPaymentMethod());
-        r.setTotalAmount(sale.getTotalAmount());
-        r.setPrescriptionId(sale.getPrescriptionId());
-        r.setCreatedAt(sale.getCreatedAt());
-        if (sale.getCustomer() != null) {
-            r.setCustomerId(sale.getCustomer().getId());
-            r.setCustomerName(sale.getCustomer().getCustomerName());
-        }
-        if (sale.getSoldBy() != null) r.setSoldBy(sale.getSoldBy().getFullName());
-        if (sale.getItems() != null) {
-            r.setItems(sale.getItems().stream().map(si -> {
-                SaleItemResponse sir = new SaleItemResponse();
-                sir.setId(si.getId());
-                sir.setQuantity(si.getQuantity());
-                sir.setUnitPrice(si.getUnitPrice());
-                sir.setTotalPrice(si.getTotalPrice());
-                if (si.getInventoryItem() != null) {
-                    sir.setInventoryItemId(si.getInventoryItem().getId());
-                    sir.setItemName(si.getInventoryItem().getItemName());
-                }
-                return sir;
-            }).collect(Collectors.toList()));
-        }
-        return r;
+    public PharmacyLabel generateLabel(Long rxItemId, User user) {
+        PrescriptionItem item = rxItemRepository.findById(rxItemId).orElseThrow();
+        String content = "TRUST AGRO VETERINARY PHARMACY\n" +
+                "Drug: " + item.getInventoryItem().getItemName() + "\n" +
+                "Qty: " + item.getQuantityPrescribed() + "\n" +
+                "Date: " + LocalDate.now();
+                
+        PharmacyLabel label = new PharmacyLabel();
+        label.setPrescriptionItem(item);
+        label.setLabelContent(content);
+        label.setPrintedBy(user);
+        label.setPrintedAt(LocalDateTime.now());
+        return labelRepository.save(label);
     }
 }

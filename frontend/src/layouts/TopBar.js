@@ -1,31 +1,29 @@
-import React, { useEffect, useState } from 'react';
-import { Badge, Button, ListGroup, Navbar, Offcanvas, Spinner } from 'react-bootstrap';
+import React, { useEffect, useState, useCallback } from 'react';
 import { notificationApi } from '../api';
 import { useLanguage } from '../context/LanguageContext';
+import { useAuth } from '../context/AuthContext';
+import { PERMISSIONS } from '../lib/permissions';
 import { formatDate } from '../utils';
+import { Bell, X, Check } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Skeleton } from '../components/ui/skeleton';
 
-const BellIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    aria-hidden="true"
-    style={{ width: 18, height: 18, stroke: 'currentColor', fill: 'none', strokeWidth: 1.9 }}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M6 9a6 6 0 1 1 12 0c0 5 2 6 2 6H4s2-1 2-6" />
-    <path d="M10 18a2 2 0 0 0 4 0" />
-  </svg>
-);
+const NOTIFICATION_POLL_MS = 60000;
 
 const TopBar = ({ onMenuToggle }) => {
   const { t } = useLanguage();
+  const { hasPermission } = useAuth();
+  const canViewNotifications = hasPermission(PERMISSIONS.VIEW_NOTIFICATIONS);
   const [unread, setUnread] = useState(0);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
 
-  const loadNotifications = async () => {
-    setLoadingNotifications(true);
+  const loadNotifications = useCallback(async (silent = false) => {
+    if (!canViewNotifications) return;
+    if (!silent) setLoadingNotifications(true);
     try {
       const res = await notificationApi.getAll();
       const rows = res.data.data || [];
@@ -35,13 +33,16 @@ const TopBar = ({ onMenuToggle }) => {
       setNotifications([]);
       setUnread(0);
     } finally {
-      setLoadingNotifications(false);
+      if (!silent) setLoadingNotifications(false);
     }
-  };
+  }, [canViewNotifications]);
 
   useEffect(() => {
     loadNotifications();
-  }, []);
+    if (!canViewNotifications) return undefined;
+    const interval = setInterval(() => loadNotifications(true), NOTIFICATION_POLL_MS);
+    return () => clearInterval(interval);
+  }, [loadNotifications, canViewNotifications]);
 
   const handleOpenNotifications = async () => {
     setShowNotifications(true);
@@ -62,74 +63,81 @@ const TopBar = ({ onMenuToggle }) => {
 
   return (
     <>
-      <Navbar bg="white" className="border-bottom px-3 py-2" style={{ marginLeft: 0 }}>
-        <Button variant="outline-secondary" size="sm" className="d-lg-none me-2" onClick={onMenuToggle}>
-          {t('topbar.menu')}
-        </Button>
-        <span className="fw-semibold" style={{ color: '#2d5843', letterSpacing: '0.01em' }}>{t('topbar.title')}</span>
-        <div className="ms-auto d-flex align-items-center gap-2">
+      <div className="flex items-center gap-4">
+        <h1 className="text-lg font-semibold text-gray-900">{t('topbar.title')}</h1>
+        
+        {canViewNotifications && (
           <Button
-            variant="light"
-            className="position-relative border d-inline-flex align-items-center justify-content-center"
-            style={{ width: 44, height: 40 }}
+            variant="ghost"
+            size="icon"
+            className="relative"
             onClick={handleOpenNotifications}
-            aria-label={t('topbar.openNotifications')}
-            title={t('topbar.notifications')}
           >
-            <BellIcon />
+            <Bell className="h-5 w-5" />
             {unread > 0 && (
-              <Badge
-                bg="danger"
-                pill
-                className="position-absolute top-0 start-100 translate-middle"
-                style={{ fontSize: 9 }}
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
               >
                 {unread}
               </Badge>
             )}
           </Button>
-        </div>
-      </Navbar>
+        )}
+      </div>
 
-      <Offcanvas show={showNotifications} onHide={() => setShowNotifications(false)} placement="end">
-        <Offcanvas.Header closeButton>
-          <Offcanvas.Title>{t('topbar.notifications')}</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body>
-          {loadingNotifications ? (
-            <div className="d-flex justify-content-center py-4">
-              <Spinner animation="border" variant="success" />
-            </div>
-          ) : notifications.length === 0 ? (
-            <p className="text-muted mb-0">{t('topbar.noNotifications')}</p>
-          ) : (
-            <ListGroup variant="flush">
-              {notifications.map((notification) => (
-                <ListGroup.Item key={notification.id} className="px-0">
-                  <div className="d-flex justify-content-between align-items-start gap-3">
-                    <div>
-                      <div className="fw-semibold">{notification.title}</div>
-                      <div className="small text-muted mb-1">{notification.message}</div>
-                      <div className="small text-muted">
-                        {notification.relatedModule || t('topbar.general')} - {formatDate(notification.createdAt)}
-                      </div>
-                    </div>
-                    {!notification.read && (
-                      <Button
-                        variant="outline-success"
-                        size="sm"
-                        onClick={() => handleMarkRead(notification.id)}
-                      >
-                        {t('topbar.markRead')}
-                      </Button>
-                    )}
+      <Dialog open={showNotifications} onOpenChange={setShowNotifications}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('topbar.notifications')}</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[400px] overflow-y-auto">
+            {loadingNotifications ? (
+              <div className="space-y-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/2" />
                   </div>
-                </ListGroup.Item>
-              ))}
-            </ListGroup>
-          )}
-        </Offcanvas.Body>
-      </Offcanvas>
+                ))}
+              </div>
+            ) : notifications.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-8">{t('topbar.noNotifications')}</p>
+            ) : (
+              <div className="space-y-3">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`p-3 rounded-lg border ${
+                      notification.read ? 'bg-gray-50' : 'bg-white border-emerald-200'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex-1">
+                        <div className="font-semibold text-sm">{notification.title}</div>
+                        <div className="text-sm text-gray-600 mt-1">{notification.message}</div>
+                        <div className="text-xs text-gray-400 mt-2">
+                          {notification.relatedModule || t('topbar.general')} - {formatDate(notification.createdAt)}
+                        </div>
+                      </div>
+                      {!notification.read && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleMarkRead(notification.id)}
+                        >
+                          <Check className="mr-2 h-4 w-4" />
+                          {t('topbar.markRead')}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

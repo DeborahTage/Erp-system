@@ -39,4 +39,21 @@ public class Farm {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    public Long getId() { return id; }
+    public String getFarmName() { return farmName; }
+    public String getLocation() { return location; }
+    public FarmType getFarmType() { return farmType; }
+    public Integer getCapacity() { return capacity; }
+    public User getAssignedFarmManager() { return assignedFarmManager; }
+    public FarmStatus getStatus() { return status; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public void setFarmName(String farmName) { this.farmName = farmName; }
+    public void setLocation(String location) { this.location = location; }
+    public void setFarmType(FarmType farmType) { this.farmType = farmType; }
+    public void setCapacity(Integer capacity) { this.capacity = capacity; }
+    public void setAssignedFarmManager(User assignedFarmManager) { this.assignedFarmManager = assignedFarmManager; }
+    public void setStatus(FarmStatus status) { this.status = status; }
 }

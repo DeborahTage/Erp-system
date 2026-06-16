@@ -21,4 +21,13 @@ public class HealthIssueReportRequest {
     @Size(max = 1000)
     private String remarks;
     private LocalDate reportDate;
+
+    public Long getFarmId() { return farmId; }
+    public Long getFlockId() { return flockId; }
+    public Long getDailyFarmRecordId() { return dailyFarmRecordId; }
+    public String getSymptoms() { return symptoms; }
+    public Integer getMortalityObserved() { return mortalityObserved; }
+    public Integer getNumberAffected() { return numberAffected; }
+    public String getRemarks() { return remarks; }
+    public LocalDate getReportDate() { return reportDate; }
 }

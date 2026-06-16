@@ -17,4 +17,11 @@ public class FarmVisitRequest {
     @Size(max = 1200)
     private String adviceGiven;
     private LocalDate nextFollowUpDate;
+
+    public Long getClientId() { return clientId; }
+    public LocalDate getVisitDate() { return visitDate; }
+    public String getPurpose() { return purpose; }
+    public String getObservation() { return observation; }
+    public String getAdviceGiven() { return adviceGiven; }
+    public LocalDate getNextFollowUpDate() { return nextFollowUpDate; }
 }

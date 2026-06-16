@@ -1,9 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, Col, Form, Row } from 'react-bootstrap';
 import { dailyRecordApi, inventoryApi, financeApi, pharmacyApi } from '../../api';
-import DataTable from '../../components/common/DataTable';
+import DataTable from '../../components/shared/DataTable';
+import PageHeader from '../../components/shared/PageHeader';
 import { useLanguage } from '../../context/LanguageContext';
 import { formatDate, formatCurrency } from '../../utils';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { 
+  FileText, 
+  Download, 
+  Printer, 
+  BarChart3, 
+  TrendingUp, 
+  Package, 
+  DollarSign, 
+  Activity,
+  AlertTriangle,
+  Calendar
+} from 'lucide-react';
 
 const PERIOD_OPTIONS = ['daily', 'weekly', 'monthly'];
 
@@ -77,14 +92,14 @@ const Reports = () => {
   };
 
   const reportTypes = [
-    { key: 'daily', label: t('reportsPage.daily') },
-    { key: 'mortality', label: t('reportsPage.mortality') },
-    { key: 'stock', label: t('reportsPage.stock') },
-    { key: 'lowstock', label: t('reportsPage.lowstock') },
-    { key: 'expiry', label: t('reportsPage.expiry') },
-    { key: 'sales', label: t('reportsPage.sales') },
-    { key: 'income', label: t('reportsPage.income') },
-    { key: 'expenses', label: t('reportsPage.expenses') },
+    { key: 'daily', label: t('reportsPage.daily'), icon: Calendar, description: 'Daily farm operations and production data' },
+    { key: 'mortality', label: t('reportsPage.mortality'), icon: AlertTriangle, description: 'Mortality rates and death analysis' },
+    { key: 'stock', label: t('reportsPage.stock'), icon: Package, description: 'Current inventory stock levels' },
+    { key: 'lowstock', label: t('reportsPage.lowstock'), icon: AlertTriangle, description: 'Items below minimum stock level' },
+    { key: 'expiry', label: t('reportsPage.expiry'), icon: Calendar, description: 'Items approaching expiry date' },
+    { key: 'sales', label: t('reportsPage.sales'), icon: DollarSign, description: 'Pharmacy sales and revenue' },
+    { key: 'income', label: t('reportsPage.income'), icon: TrendingUp, description: 'Income and revenue transactions' },
+    { key: 'expenses', label: t('reportsPage.expenses'), icon: Activity, description: 'Expense tracking and analysis' },
   ];
 
   const dailyCols = [
@@ -221,54 +236,70 @@ const Reports = () => {
   };
 
   return (
-    <div>
-      <h5 className="fw-bold mb-3">{t('reportsPage.title')}</h5>
-      <Row className="g-3">
-        <Col xs={12} md={3}>
-          <Card className="border-0 shadow-sm">
-            <Card.Body className="p-2">
-              {reportTypes.map(r => (
-                <button key={r.key} className={`btn btn-sm w-100 text-start mb-1 ${activeReport === r.key ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => setActiveReport(r.key)}>
-                  {r.label}
-                </button>
-              ))}
-            </Card.Body>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title="Report Center"
+        description="Generate and export comprehensive reports across all modules."
+      />
+
+      {/* Report Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {reportTypes.map((report) => (
+          <Card
+            key={report.key}
+            className={`cursor-pointer transition-all hover:shadow-md ${
+              activeReport === report.key ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+            }`}
+            onClick={() => setActiveReport(report.key)}
+          >
+            <CardContent className="p-4">
+              <report.icon className={`h-8 w-8 mb-2 ${activeReport === report.key ? 'text-blue-600' : 'text-gray-400'}`} />
+              <h3 className="font-semibold text-sm mb-1">{report.label}</h3>
+              <p className="text-xs text-gray-500">{report.description}</p>
+            </CardContent>
           </Card>
-        </Col>
-        <Col xs={12} md={9}>
-          <Card className="border-0 shadow-sm">
-            <Card.Body>
-              <div className="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-3">
-                <div>
-                  <h6 className="fw-semibold mb-1">{selectedReportLabel}</h6>
-                  <span className="text-muted small">{filteredData.length} {t('common.records')}</span>
-                </div>
-                <div className="d-flex flex-column flex-sm-row gap-2 align-items-sm-center">
-                  <Form.Select
-                    size="sm"
-                    value={reportPeriod}
-                    onChange={(e) => setReportPeriod(e.target.value)}
-                    style={{ minWidth: '180px' }}
-                  >
+        ))}
+      </div>
+
+      {/* Report Content */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle>{selectedReportLabel}</CardTitle>
+              <p className="text-sm text-gray-500 mt-1">{filteredData.length} records found</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {supportsPeriodFilter && (
+                <Select value={reportPeriod} onValueChange={setReportPeriod}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
                     {PERIOD_OPTIONS.map((period) => (
-                      <option key={period} value={period}>
+                      <SelectItem key={period} value={period}>
                         {t(`reportsPage.${period}Period`)}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </Form.Select>
-                  <Button size="sm" variant="outline-success" onClick={exportToExcel}>
-                    {t('reportsPage.exportExcel')}
-                  </Button>
-                  <Button size="sm" variant="success" onClick={exportToPdf}>
-                    {t('reportsPage.exportPdf')}
-                  </Button>
-                </div>
-              </div>
-              <DataTable columns={columns} data={filteredData} loading={loading} />
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+                  </SelectContent>
+                </Select>
+              )}
+              <Button variant="outline" onClick={exportToExcel}>
+                <Download className="mr-2 h-4 w-4" />
+                Excel
+              </Button>
+              <Button onClick={exportToPdf}>
+                <Printer className="mr-2 h-4 w-4" />
+                PDF
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <DataTable columns={columns} data={filteredData} loading={loading} searchable pagination />
+        </CardContent>
+      </Card>
     </div>
   );
 };

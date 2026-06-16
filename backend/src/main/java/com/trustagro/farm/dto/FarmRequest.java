@@ -19,4 +19,10 @@ public class FarmRequest {
     @PositiveOrZero
     private Integer capacity;
     private Long assignedFarmManagerId;
+
+    public String getFarmName() { return farmName; }
+    public String getLocation() { return location; }
+    public FarmType getFarmType() { return farmType; }
+    public Integer getCapacity() { return capacity; }
+    public Long getAssignedFarmManagerId() { return assignedFarmManagerId; }
 }

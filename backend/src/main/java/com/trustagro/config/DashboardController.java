@@ -7,11 +7,12 @@ import com.trustagro.farm.repository.FlockRepository;
 import com.trustagro.farm.entity.FarmStatus;
 import com.trustagro.farm.entity.FlockStatus;
 import com.trustagro.finance.service.FinanceService;
+import com.trustagro.finance.service.FinanceReportService;
 import com.trustagro.inventory.repository.StockBatchRepository;
 import com.trustagro.inventory.repository.InventoryItemRepository;
 import com.trustagro.notification.repository.NotificationRepository;
-import com.trustagro.pharmacy.entity.DispensingType;
-import com.trustagro.pharmacy.repository.DispensingRecordRepository;
+
+
 import com.trustagro.pharmacy.repository.PharmacySaleRepository;
 import com.trustagro.veterinary.entity.HealthIssueReportStatus;
 import com.trustagro.veterinary.entity.PrescriptionStatus;
@@ -20,7 +21,7 @@ import com.trustagro.veterinary.repository.VaccinationScheduleRepository;
 import com.trustagro.veterinary.repository.DiseaseCaseRepository;
 import com.trustagro.veterinary.repository.HealthIssueReportRepository;
 import com.trustagro.veterinary.repository.PrescriptionRepository;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,8 +34,28 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dashboard")
-@RequiredArgsConstructor
 public class DashboardController {
+
+    public DashboardController(FarmRepository farmRepository, FlockRepository flockRepository,
+            DailyFarmRecordRepository dailyRecordRepository, InventoryItemRepository inventoryItemRepository,
+            StockBatchRepository stockBatchRepository, com.trustagro.pharmacy.repository.PharmacySaleRepository saleRepository,
+            FinanceService financeService, FinanceReportService reportService, NotificationRepository notificationRepository,
+            VaccinationScheduleRepository vaccinationRepository, DiseaseCaseRepository diseaseCaseRepository,
+            HealthIssueReportRepository healthIssueReportRepository, PrescriptionRepository prescriptionRepository) {
+        this.farmRepository = farmRepository;
+        this.flockRepository = flockRepository;
+        this.dailyRecordRepository = dailyRecordRepository;
+        this.inventoryItemRepository = inventoryItemRepository;
+        this.stockBatchRepository = stockBatchRepository;
+        this.saleRepository = saleRepository;
+        this.financeService = financeService;
+        this.reportService = reportService;
+        this.notificationRepository = notificationRepository;
+        this.vaccinationRepository = vaccinationRepository;
+        this.diseaseCaseRepository = diseaseCaseRepository;
+        this.healthIssueReportRepository = healthIssueReportRepository;
+        this.prescriptionRepository = prescriptionRepository;
+    }
 
     private final FarmRepository farmRepository;
     private final FlockRepository flockRepository;
@@ -42,8 +63,9 @@ public class DashboardController {
     private final InventoryItemRepository inventoryItemRepository;
     private final StockBatchRepository stockBatchRepository;
     private final PharmacySaleRepository saleRepository;
-    private final DispensingRecordRepository dispensingRecordRepository;
+
     private final FinanceService financeService;
+    private final FinanceReportService reportService;
     private final NotificationRepository notificationRepository;
     private final VaccinationScheduleRepository vaccinationRepository;
     private final DiseaseCaseRepository diseaseCaseRepository;
@@ -57,8 +79,7 @@ public class DashboardController {
         data.put("totalFarms", farmRepository.countByStatus(FarmStatus.ACTIVE));
         data.put("totalActiveFlocks", flockRepository.countByStatus(FlockStatus.ACTIVE));
         data.put("todayMortality", dailyRecordRepository.sumMortalityByDate(LocalDate.now()));
-        data.put("todayPharmacySales", saleRepository.sumTotalByDate(LocalDate.now()));
-        var pl = financeService.getProfitLoss(null, null);
+        var pl = reportService.getProfitAndLoss(null, null, null);
         data.put("totalRevenue", pl.getTotalIncome());
         data.put("totalExpenses", pl.getTotalExpenses());
         data.put("netProfitLoss", pl.getNetProfitLoss());
@@ -110,17 +131,15 @@ public class DashboardController {
     @PreAuthorize("hasAnyRole('ADMIN','PHARMACY_SALES')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> pharmacyDashboard() {
         Map<String, Object> data = new HashMap<>();
-        data.put("todaySales", saleRepository.sumTotalByDate(LocalDate.now()));
         data.put("totalSalesCount", saleRepository.count());
         data.put("pendingPrescriptions", prescriptionRepository.countByStatus(PrescriptionStatus.PENDING));
-        data.put("internalDrugUsage", dispensingRecordRepository.countByDispensingType(DispensingType.INTERNAL_FARM_USE));
         return ResponseEntity.ok(ApiResponse.success(data));
     }
 
     @GetMapping("/finance")
     @PreAuthorize("hasAnyRole('ADMIN','FINANCE_OFFICER','GENERAL_MANAGER')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> financeDashboard() {
-        var pl = financeService.getProfitLoss(null, null);
+        var pl = reportService.getProfitAndLoss(null, null, null);
         Map<String, Object> data = new HashMap<>();
         data.put("totalIncome", pl.getTotalIncome());
         data.put("totalExpenses", pl.getTotalExpenses());

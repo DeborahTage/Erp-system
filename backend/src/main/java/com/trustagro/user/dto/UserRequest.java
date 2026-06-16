@@ -22,4 +22,10 @@ public class UserRequest {
     private String password;
     @NotNull
     private Role role;
+
+    public String getFullName() { return fullName; }
+    public String getEmail() { return email; }
+    public String getPhone() { return phone; }
+    public String getPassword() { return password; }
+    public Role getRole() { return role; }
 }

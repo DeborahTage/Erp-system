@@ -1,0 +1,428 @@
+// Role definitions with permissions
+export const ROLES = {
+  ADMIN: 'ADMIN',
+  GENERAL_MANAGER: 'GENERAL_MANAGER',
+  FARM_MANAGER: 'FARM_MANAGER',
+  OPERATIONS_MANAGER: 'OPERATIONS_MANAGER',
+  VETERINARY_OFFICER: 'VETERINARY_OFFICER',
+  STORE_KEEPER: 'STORE_KEEPER',
+  PHARMACY_SALES: 'PHARMACY_SALES',
+  FINANCE_OFFICER: 'FINANCE_OFFICER',
+  EXTENSION_WORKER: 'EXTENSION_WORKER',
+};
+
+// Permission definitions
+export const PERMISSIONS = {
+  // Dashboard permissions
+  VIEW_ADMIN_DASHBOARD: 'view_admin_dashboard',
+  VIEW_FARM_DASHBOARD: 'view_farm_dashboard',
+  VIEW_VETERINARY_DASHBOARD: 'view_veterinary_dashboard',
+  VIEW_INVENTORY_DASHBOARD: 'view_inventory_dashboard',
+  VIEW_PHARMACY_DASHBOARD: 'view_pharmacy_dashboard',
+  VIEW_FINANCE_DASHBOARD: 'view_finance_dashboard',
+  VIEW_CRM_DASHBOARD: 'view_crm_dashboard',
+
+  // User management permissions
+  VIEW_USERS: 'view_users',
+  CREATE_USERS: 'create_users',
+  EDIT_USERS: 'edit_users',
+  DELETE_USERS: 'delete_users',
+  ASSIGN_ROLES: 'assign_roles',
+  ACTIVATE_USERS: 'activate_users',
+  DEACTIVATE_USERS: 'deactivate_users',
+
+  // Farm permissions
+  VIEW_FARMS: 'view_farms',
+  CREATE_FARMS: 'create_farms',
+  EDIT_FARMS: 'edit_farms',
+  DELETE_FARMS: 'delete_farms',
+  VIEW_FLOCKS: 'view_flocks',
+  CREATE_FLOCKS: 'create_flocks',
+  EDIT_FLOCKS: 'edit_flocks',
+  DELETE_FLOCKS: 'delete_flocks',
+  VIEW_DAILY_RECORDS: 'view_daily_records',
+  CREATE_DAILY_RECORDS: 'create_daily_records',
+  EDIT_DAILY_RECORDS: 'edit_daily_records',
+  DELETE_DAILY_RECORDS: 'delete_daily_records',
+
+  // Veterinary permissions
+  VIEW_VETERINARY: 'view_veterinary',
+  CREATE_DISEASE_CASES: 'create_disease_cases',
+  EDIT_DISEASE_CASES: 'edit_disease_cases',
+  DELETE_DISEASE_CASES: 'delete_disease_cases',
+  CREATE_TREATMENTS: 'create_treatments',
+  EDIT_TREATMENTS: 'edit_treatments',
+  DELETE_TREATMENTS: 'delete_treatments',
+  CREATE_PRESCRIPTIONS: 'create_prescriptions',
+  EDIT_PRESCRIPTIONS: 'edit_prescriptions',
+  DELETE_PRESCRIPTIONS: 'delete_prescriptions',
+  MANAGE_VACCINATIONS: 'manage_vaccinations',
+  VIEW_HEALTH_REPORTS: 'view_health_reports',
+
+  // Inventory permissions
+  VIEW_INVENTORY: 'view_inventory',
+  CREATE_INVENTORY_ITEMS: 'create_inventory_items',
+  EDIT_INVENTORY_ITEMS: 'edit_inventory_items',
+  DELETE_INVENTORY_ITEMS: 'delete_inventory_items',
+  STOCK_IN: 'stock_in',
+  STOCK_OUT: 'stock_out',
+  VIEW_INVENTORY_REPORTS: 'view_inventory_reports',
+  VIEW_EXPIRY_MONITORING: 'view_expiry_monitoring',
+
+  // Pharmacy permissions
+  VIEW_PHARMACY: 'view_pharmacy',
+  CREATE_PHARMACY_SALES: 'create_pharmacy_sales',
+  EDIT_PHARMACY_SALES: 'edit_pharmacy_sales',
+  DELETE_PHARMACY_SALES: 'delete_pharmacy_sales',
+  MANAGE_CUSTOMERS: 'manage_customers',
+  DISPENSE_PRESCRIPTIONS: 'dispense_prescriptions',
+  VIEW_RECEIPTS: 'view_receipts',
+
+  // Finance permissions
+  VIEW_FINANCE: 'view_finance',
+  CREATE_INCOME: 'create_income',
+  EDIT_INCOME: 'edit_income',
+  DELETE_INCOME: 'delete_income',
+  CREATE_EXPENSES: 'create_expenses',
+  EDIT_EXPENSES: 'edit_expenses',
+  DELETE_EXPENSES: 'delete_expenses',
+  VIEW_FINANCIAL_REPORTS: 'view_financial_reports',
+
+  // CRM/Extension permissions
+  VIEW_CRM: 'view_crm',
+  MANAGE_CLIENTS: 'manage_clients',
+  CREATE_FARM_VISITS: 'create_farm_visits',
+  EDIT_FARM_VISITS: 'edit_farm_visits',
+  DELETE_FARM_VISITS: 'delete_farm_visits',
+  CREATE_ADVISORY_REPORTS: 'create_advisory_reports',
+  MANAGE_FOLLOW_UPS: 'manage_follow_ups',
+
+  // Reports permissions
+  VIEW_REPORTS: 'view_reports',
+  EXPORT_REPORTS: 'export_reports',
+
+  // Settings permissions
+  VIEW_SETTINGS: 'view_settings',
+  MANAGE_SETTINGS: 'manage_settings',
+
+  // Shared services (Phase 1)
+  VIEW_AUDIT_LOGS: 'view_audit_logs',
+  VIEW_MASTER_DATA: 'view_master_data',
+  MANAGE_MASTER_DATA: 'manage_master_data',
+  VIEW_NOTIFICATIONS: 'view_notifications',
+};
+
+// Role to permissions mapping
+export const ROLE_PERMISSIONS = {
+  [ROLES.ADMIN]: [
+    // Admin can view everything
+    PERMISSIONS.VIEW_ADMIN_DASHBOARD,
+    PERMISSIONS.VIEW_FARM_DASHBOARD,
+    PERMISSIONS.VIEW_VETERINARY_DASHBOARD,
+    PERMISSIONS.VIEW_INVENTORY_DASHBOARD,
+    PERMISSIONS.VIEW_PHARMACY_DASHBOARD,
+    PERMISSIONS.VIEW_FINANCE_DASHBOARD,
+    PERMISSIONS.VIEW_CRM_DASHBOARD,
+    
+    // User management (full access)
+    PERMISSIONS.VIEW_USERS,
+    PERMISSIONS.CREATE_USERS,
+    PERMISSIONS.EDIT_USERS,
+    PERMISSIONS.DELETE_USERS,
+    PERMISSIONS.ASSIGN_ROLES,
+    PERMISSIONS.ACTIVATE_USERS,
+    PERMISSIONS.DEACTIVATE_USERS,
+    
+    // View all records
+    PERMISSIONS.VIEW_FARMS,
+    PERMISSIONS.VIEW_FLOCKS,
+    PERMISSIONS.VIEW_DAILY_RECORDS,
+    PERMISSIONS.VIEW_VETERINARY,
+    PERMISSIONS.VIEW_HEALTH_REPORTS,
+    PERMISSIONS.VIEW_INVENTORY,
+    PERMISSIONS.VIEW_INVENTORY_REPORTS,
+    PERMISSIONS.VIEW_EXPIRY_MONITORING,
+    PERMISSIONS.VIEW_PHARMACY,
+    PERMISSIONS.VIEW_RECEIPTS,
+    PERMISSIONS.VIEW_FINANCE,
+    PERMISSIONS.VIEW_FINANCIAL_REPORTS,
+    PERMISSIONS.VIEW_CRM,
+    PERMISSIONS.VIEW_REPORTS,
+    PERMISSIONS.EXPORT_REPORTS,
+    PERMISSIONS.VIEW_SETTINGS,
+    PERMISSIONS.MANAGE_SETTINGS,
+    PERMISSIONS.VIEW_AUDIT_LOGS,
+    PERMISSIONS.VIEW_MASTER_DATA,
+    PERMISSIONS.MANAGE_MASTER_DATA,
+    PERMISSIONS.VIEW_NOTIFICATIONS,
+    
+    // Admin CANNOT create operational records
+    // NO: CREATE_DAILY_RECORDS, CREATE_DISEASE_CASES, CREATE_TREATMENTS, 
+    // NO: CREATE_PRESCRIPTIONS, STOCK_IN, STOCK_OUT, CREATE_INCOME, CREATE_EXPENSES
+  ],
+  
+  [ROLES.GENERAL_MANAGER]: [
+    // Similar to Admin but with some restrictions
+    PERMISSIONS.VIEW_ADMIN_DASHBOARD,
+    PERMISSIONS.VIEW_FARM_DASHBOARD,
+    PERMISSIONS.VIEW_VETERINARY_DASHBOARD,
+    PERMISSIONS.VIEW_INVENTORY_DASHBOARD,
+    PERMISSIONS.VIEW_PHARMACY_DASHBOARD,
+    PERMISSIONS.VIEW_FINANCE_DASHBOARD,
+    PERMISSIONS.VIEW_CRM_DASHBOARD,
+    
+    PERMISSIONS.VIEW_USERS,
+    PERMISSIONS.VIEW_FARMS,
+    PERMISSIONS.VIEW_FLOCKS,
+    PERMISSIONS.VIEW_DAILY_RECORDS,
+    PERMISSIONS.VIEW_VETERINARY,
+    PERMISSIONS.VIEW_HEALTH_REPORTS,
+    PERMISSIONS.VIEW_INVENTORY,
+    PERMISSIONS.VIEW_INVENTORY_REPORTS,
+    PERMISSIONS.VIEW_EXPIRY_MONITORING,
+    PERMISSIONS.VIEW_PHARMACY,
+    PERMISSIONS.VIEW_RECEIPTS,
+    PERMISSIONS.VIEW_FINANCE,
+    PERMISSIONS.VIEW_FINANCIAL_REPORTS,
+    PERMISSIONS.VIEW_CRM,
+    PERMISSIONS.VIEW_REPORTS,
+    PERMISSIONS.EXPORT_REPORTS,
+    PERMISSIONS.VIEW_SETTINGS,
+    PERMISSIONS.VIEW_AUDIT_LOGS,
+    PERMISSIONS.VIEW_MASTER_DATA,
+    PERMISSIONS.VIEW_NOTIFICATIONS,
+  ],
+  
+  [ROLES.FARM_MANAGER]: [
+    PERMISSIONS.VIEW_FARM_DASHBOARD,
+    PERMISSIONS.VIEW_FARMS,
+    PERMISSIONS.VIEW_FLOCKS,
+    PERMISSIONS.VIEW_DAILY_RECORDS,
+    PERMISSIONS.CREATE_DAILY_RECORDS,
+    PERMISSIONS.EDIT_DAILY_RECORDS,
+    PERMISSIONS.VIEW_VETERINARY,
+    PERMISSIONS.VIEW_HEALTH_REPORTS,
+    PERMISSIONS.CREATE_DISEASE_CASES,
+    PERMISSIONS.VIEW_NOTIFICATIONS,
+  ],
+  
+  [ROLES.OPERATIONS_MANAGER]: [
+    PERMISSIONS.VIEW_ADMIN_DASHBOARD,
+    PERMISSIONS.VIEW_FARM_DASHBOARD,
+    PERMISSIONS.VIEW_FARMS,
+    PERMISSIONS.VIEW_FLOCKS,
+    PERMISSIONS.VIEW_DAILY_RECORDS,
+    PERMISSIONS.CREATE_DAILY_RECORDS,
+    PERMISSIONS.EDIT_DAILY_RECORDS,
+    PERMISSIONS.VIEW_VETERINARY,
+    PERMISSIONS.VIEW_HEALTH_REPORTS,
+    PERMISSIONS.VIEW_INVENTORY,
+    PERMISSIONS.VIEW_INVENTORY_REPORTS,
+    PERMISSIONS.VIEW_USERS,
+    PERMISSIONS.VIEW_NOTIFICATIONS,
+  ],
+  
+  [ROLES.VETERINARY_OFFICER]: [
+    PERMISSIONS.VIEW_VETERINARY_DASHBOARD,
+    PERMISSIONS.VIEW_VETERINARY,
+    PERMISSIONS.VIEW_HEALTH_REPORTS,
+    PERMISSIONS.CREATE_DISEASE_CASES,
+    PERMISSIONS.EDIT_DISEASE_CASES,
+    PERMISSIONS.DELETE_DISEASE_CASES,
+    PERMISSIONS.CREATE_TREATMENTS,
+    PERMISSIONS.EDIT_TREATMENTS,
+    PERMISSIONS.DELETE_TREATMENTS,
+    PERMISSIONS.CREATE_PRESCRIPTIONS,
+    PERMISSIONS.EDIT_PRESCRIPTIONS,
+    PERMISSIONS.DELETE_PRESCRIPTIONS,
+    PERMISSIONS.MANAGE_VACCINATIONS,
+    PERMISSIONS.VIEW_FARMS,
+    PERMISSIONS.VIEW_FLOCKS,
+  ],
+  
+  [ROLES.STORE_KEEPER]: [
+    PERMISSIONS.VIEW_INVENTORY_DASHBOARD,
+    PERMISSIONS.VIEW_INVENTORY,
+    PERMISSIONS.CREATE_INVENTORY_ITEMS,
+    PERMISSIONS.EDIT_INVENTORY_ITEMS,
+    PERMISSIONS.DELETE_INVENTORY_ITEMS,
+    PERMISSIONS.STOCK_IN,
+    PERMISSIONS.STOCK_OUT,
+    PERMISSIONS.VIEW_INVENTORY_REPORTS,
+    PERMISSIONS.VIEW_EXPIRY_MONITORING,
+    PERMISSIONS.VIEW_NOTIFICATIONS,
+  ],
+  
+  [ROLES.PHARMACY_SALES]: [
+    PERMISSIONS.VIEW_PHARMACY_DASHBOARD,
+    PERMISSIONS.VIEW_PHARMACY,
+    PERMISSIONS.CREATE_PHARMACY_SALES,
+    PERMISSIONS.EDIT_PHARMACY_SALES,
+    PERMISSIONS.DELETE_PHARMACY_SALES,
+    PERMISSIONS.MANAGE_CUSTOMERS,
+    PERMISSIONS.DISPENSE_PRESCRIPTIONS,
+    PERMISSIONS.VIEW_RECEIPTS,
+    PERMISSIONS.VIEW_INVENTORY,
+    PERMISSIONS.VIEW_NOTIFICATIONS,
+  ],
+  
+  [ROLES.FINANCE_OFFICER]: [
+    PERMISSIONS.VIEW_FINANCE_DASHBOARD,
+    PERMISSIONS.VIEW_FINANCE,
+    PERMISSIONS.CREATE_INCOME,
+    PERMISSIONS.EDIT_INCOME,
+    PERMISSIONS.DELETE_INCOME,
+    PERMISSIONS.CREATE_EXPENSES,
+    PERMISSIONS.EDIT_EXPENSES,
+    PERMISSIONS.DELETE_EXPENSES,
+    PERMISSIONS.VIEW_FINANCIAL_REPORTS,
+    PERMISSIONS.VIEW_NOTIFICATIONS,
+  ],
+  
+  [ROLES.EXTENSION_WORKER]: [
+    PERMISSIONS.VIEW_CRM_DASHBOARD,
+    PERMISSIONS.VIEW_CRM,
+    PERMISSIONS.MANAGE_CLIENTS,
+    PERMISSIONS.CREATE_FARM_VISITS,
+    PERMISSIONS.EDIT_FARM_VISITS,
+    PERMISSIONS.DELETE_FARM_VISITS,
+    PERMISSIONS.CREATE_ADVISORY_REPORTS,
+    PERMISSIONS.MANAGE_FOLLOW_UPS,
+    PERMISSIONS.VIEW_FARMS,
+    PERMISSIONS.VIEW_NOTIFICATIONS,
+  ],
+};
+
+/**
+ * Check if a role has a specific permission
+ */
+export const hasPermission = (role, permission) => {
+  if (!role || !permission) return false;
+  const rolePermissions = ROLE_PERMISSIONS[role] || [];
+  return rolePermissions.includes(permission);
+};
+
+/**
+ * Check if a role has any of the specified permissions
+ */
+export const hasAnyPermission = (role, permissions) => {
+  if (!role || !permissions || permissions.length === 0) return false;
+  return permissions.some(permission => hasPermission(role, permission));
+};
+
+/**
+ * Check if a role has all of the specified permissions
+ */
+export const hasAllPermissions = (role, permissions) => {
+  if (!role || !permissions || permissions.length === 0) return false;
+  return permissions.every(permission => hasPermission(role, permission));
+};
+
+/**
+ * Get all permissions for a role
+ */
+export const getRolePermissions = (role) => {
+  return ROLE_PERMISSIONS[role] || [];
+};
+
+/**
+ * Check if user can access a specific module
+ */
+export const canAccessModule = (role, module) => {
+  if (!module || module === 'dashboard') {
+    return hasAnyPermission(role, [
+      PERMISSIONS.VIEW_ADMIN_DASHBOARD,
+      PERMISSIONS.VIEW_FARM_DASHBOARD,
+      PERMISSIONS.VIEW_VETERINARY_DASHBOARD,
+      PERMISSIONS.VIEW_INVENTORY_DASHBOARD,
+      PERMISSIONS.VIEW_PHARMACY_DASHBOARD,
+      PERMISSIONS.VIEW_FINANCE_DASHBOARD,
+      PERMISSIONS.VIEW_CRM_DASHBOARD,
+    ]) || !!role;
+  }
+
+  const modulePermissions = {
+    users: [PERMISSIONS.VIEW_USERS],
+    farms: [PERMISSIONS.VIEW_FARMS],
+    flocks: [PERMISSIONS.VIEW_FLOCKS],
+    dailyRecords: [PERMISSIONS.VIEW_DAILY_RECORDS],
+    inventory: [PERMISSIONS.VIEW_INVENTORY],
+    veterinary: [PERMISSIONS.VIEW_VETERINARY],
+    pharmacy: [PERMISSIONS.VIEW_PHARMACY],
+    finance: [PERMISSIONS.VIEW_FINANCE],
+    crm: [PERMISSIONS.VIEW_CRM],
+    reports: [PERMISSIONS.VIEW_REPORTS],
+    settings: [PERMISSIONS.VIEW_SETTINGS],
+  };
+
+  const requiredPermissions = modulePermissions[module] || [];
+  return hasAnyPermission(role, requiredPermissions);
+};
+
+/**
+ * Check if user can perform a specific action on a module
+ */
+export const canPerformAction = (role, action, module) => {
+  const actionPermissionMap = {
+    create: {
+      users: PERMISSIONS.CREATE_USERS,
+      farms: PERMISSIONS.CREATE_FARMS,
+      flocks: PERMISSIONS.CREATE_FLOCKS,
+      dailyRecords: PERMISSIONS.CREATE_DAILY_RECORDS,
+      inventoryItems: PERMISSIONS.CREATE_INVENTORY_ITEMS,
+      diseaseCases: PERMISSIONS.CREATE_DISEASE_CASES,
+      treatments: PERMISSIONS.CREATE_TREATMENTS,
+      prescriptions: PERMISSIONS.CREATE_PRESCRIPTIONS,
+      pharmacySales: PERMISSIONS.CREATE_PHARMACY_SALES,
+      income: PERMISSIONS.CREATE_INCOME,
+      expenses: PERMISSIONS.CREATE_EXPENSES,
+      farmVisits: PERMISSIONS.CREATE_FARM_VISITS,
+      customers: PERMISSIONS.MANAGE_CUSTOMERS,
+    },
+    stockIn: {
+      inventoryItems: PERMISSIONS.STOCK_IN,
+    },
+    stockOut: {
+      inventoryItems: PERMISSIONS.STOCK_OUT,
+    },
+    edit: {
+      users: PERMISSIONS.EDIT_USERS,
+      farms: PERMISSIONS.EDIT_FARMS,
+      flocks: PERMISSIONS.EDIT_FLOCKS,
+      dailyRecords: PERMISSIONS.EDIT_DAILY_RECORDS,
+      inventoryItems: PERMISSIONS.EDIT_INVENTORY_ITEMS,
+      diseaseCases: PERMISSIONS.EDIT_DISEASE_CASES,
+      treatments: PERMISSIONS.EDIT_TREATMENTS,
+      prescriptions: PERMISSIONS.EDIT_PRESCRIPTIONS,
+      pharmacySales: PERMISSIONS.EDIT_PHARMACY_SALES,
+      income: PERMISSIONS.EDIT_INCOME,
+      expenses: PERMISSIONS.EDIT_EXPENSES,
+      farmVisits: PERMISSIONS.EDIT_FARM_VISITS,
+      customers: PERMISSIONS.MANAGE_CLIENTS,
+    },
+    delete: {
+      users: PERMISSIONS.DELETE_USERS,
+      farms: PERMISSIONS.DELETE_FARMS,
+      flocks: PERMISSIONS.DELETE_FLOCKS,
+      dailyRecords: PERMISSIONS.DELETE_DAILY_RECORDS,
+      inventoryItems: PERMISSIONS.DELETE_INVENTORY_ITEMS,
+      diseaseCases: PERMISSIONS.DELETE_DISEASE_CASES,
+      treatments: PERMISSIONS.DELETE_TREATMENTS,
+      prescriptions: PERMISSIONS.DELETE_PRESCRIPTIONS,
+      pharmacySales: PERMISSIONS.DELETE_PHARMACY_SALES,
+      income: PERMISSIONS.DELETE_INCOME,
+      expenses: PERMISSIONS.DELETE_EXPENSES,
+      farmVisits: PERMISSIONS.DELETE_FARM_VISITS,
+    },
+    stockIn: {
+      inventoryItems: PERMISSIONS.STOCK_IN,
+    },
+    stockOut: {
+      inventoryItems: PERMISSIONS.STOCK_OUT,
+    },
+  };
+
+  const permission = actionPermissionMap[action]?.[module];
+  if (!permission) return false;
+  return hasPermission(role, permission);
+};

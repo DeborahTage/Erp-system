@@ -14,4 +14,10 @@ public class HealthIssueReportReviewRequest {
     private String treatmentPlan;
     private HealthIssueReportStatus status;
     private Long diseaseCaseId;
+
+    public String getSuspectedDiagnosis() { return suspectedDiagnosis; }
+    public DiseaseSeverity getSeverity() { return severity; }
+    public String getTreatmentPlan() { return treatmentPlan; }
+    public HealthIssueReportStatus getStatus() { return status; }
+    public Long getDiseaseCaseId() { return diseaseCaseId; }
 }

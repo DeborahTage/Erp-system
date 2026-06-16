@@ -21,4 +21,13 @@ public class FlockRequest {
     private Integer initialBirdCount;
     private LocalDate startDate;
     private LocalDate expectedEndDate;
+    private String breed;
+
+    public Long getFarmId() { return farmId; }
+    public String getBatchCode() { return batchCode; }
+    public String getBirdType() { return birdType; }
+    public String getBreed() { return breed; }
+    public Integer getInitialBirdCount() { return initialBirdCount; }
+    public LocalDate getStartDate() { return startDate; }
+    public LocalDate getExpectedEndDate() { return expectedEndDate; }
 }

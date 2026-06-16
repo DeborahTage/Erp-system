@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { farmApi, inventoryApi } from '../../api';
-import { Card, Form, Button, Row, Col, Alert } from 'react-bootstrap';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { useLanguage } from '../../context/LanguageContext';
 import { toast } from 'react-toastify';
+import { ArrowLeft, ArrowDownRight, Building2, User, FileText, Calendar, Box, Tag, Save, X, Info, Layers, Stethoscope, Syringe } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import api from '../../api/axios';
+import PageHeader from '../../components/shared/PageHeader';
 
 const StockOutForm = () => {
   const { t } = useLanguage();
@@ -19,15 +27,22 @@ const StockOutForm = () => {
     referenceType: '',
     referenceId: '',
     movementDate: new Date().toISOString().split('T')[0],
+    prescriptionId: '',
+    vaccinationId: '',
   });
   const [items, setItems] = useState([]);
   const [farms, setFarms] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [vaccinations, setVaccinations] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     inventoryApi.getItems().then(r => setItems(r.data.data || []));
     farmApi.getAll().then(r => setFarms(r.data.data || []));
+    // Fetch prescriptions and vaccinations for medical linking
+    api.get('/api/vet/prescriptions').then(r => setPrescriptions(r.data.data || []));
+    api.get('/api/vet/vaccinations').then(r => setVaccinations(r.data.data || []));
   }, []);
 
   const handleSubmit = async (e) => {
@@ -42,43 +57,257 @@ const StockOutForm = () => {
         referenceId: form.referenceId ? Number(form.referenceId) : null,
         department: form.department || null,
         referenceType: form.referenceType || null,
+        prescriptionId: form.prescriptionId ? Number(form.prescriptionId) : null,
+        vaccinationId: form.vaccinationId ? Number(form.vaccinationId) : null,
       });
-      toast.success(t('stockOutForm.success'));
+      toast.success('Stock-out transaction successfully recorded');
       navigate('/inventory');
     } catch (err) {
-      setError(err.response?.data?.message || t('stockOutForm.error'));
+      setError(err.response?.data?.message || 'Failed to process transaction');
     } finally { setLoading(false); }
   };
 
   return (
-    <div>
-      <h5 className="fw-bold mb-3">{t('stockOutForm.title')}</h5>
-      <Card className="border-0 shadow-sm" style={{ maxWidth: 500 }}>
-        <Card.Body className="p-4">
-          {error && <Alert variant="danger" className="py-2 small">{error}</Alert>}
-          <Form onSubmit={handleSubmit}>
-            <Row className="g-3">
-              <Col xs={12}><Form.Group><Form.Label className="small fw-semibold">{t('stockOutForm.item')}</Form.Label><Form.Select value={form.itemId} onChange={e => setForm({ ...form, itemId: e.target.value })} required><option value="">{t('forms.selectItem')}</option>{items.map(i => <option key={i.id} value={i.id}>{i.itemName} ({t('stockOutForm.stockLabel')}: {i.currentStock})</option>)}</Form.Select></Form.Group></Col>
-              <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('stockOutForm.quantity')}</Form.Label><Form.Control type="number" min="0.01" step="0.01" value={form.quantity} onChange={e => setForm({ ...form, quantity: e.target.value })} required /></Form.Group></Col>
-              <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('stockOutForm.issuedTo')}</Form.Label><Form.Select value={form.issuedToType} onChange={e => setForm({ ...form, issuedToType: e.target.value, farmId: '', department: '' })}>{['FARM','DEPARTMENT','CUSTOMER','INTERNAL'].map(option => <option key={option} value={option}>{t(`options.${option}`)}</option>)}</Form.Select></Form.Group></Col>
-              <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">Movement Date</Form.Label><Form.Control type="date" value={form.movementDate} onChange={e => setForm({ ...form, movementDate: e.target.value })} /></Form.Group></Col>
-              {form.issuedToType === 'FARM' && (
-                <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">{t('farmEditForm.farmName')}</Form.Label><Form.Select value={form.farmId} onChange={e => setForm({ ...form, farmId: e.target.value })}><option value="">{t('forms.selectFarm')}</option>{farms.map(f => <option key={f.id} value={f.id}>{f.farmName}</option>)}</Form.Select></Form.Group></Col>
-              )}
-              {form.issuedToType === 'DEPARTMENT' && (
-                <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">Department</Form.Label><Form.Control value={form.department} onChange={e => setForm({ ...form, department: e.target.value })} /></Form.Group></Col>
-              )}
-              <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">Reference Type</Form.Label><Form.Control value={form.referenceType} onChange={e => setForm({ ...form, referenceType: e.target.value })} placeholder="Optional" /></Form.Group></Col>
-              <Col xs={6}><Form.Group><Form.Label className="small fw-semibold">Reference ID</Form.Label><Form.Control type="number" min="1" value={form.referenceId} onChange={e => setForm({ ...form, referenceId: e.target.value })} placeholder="Optional" /></Form.Group></Col>
-              <Col xs={12}><Form.Group><Form.Label className="small fw-semibold">{t('stockOutForm.reason')}</Form.Label><Form.Control value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} /></Form.Group></Col>
-            </Row>
-            <div className="d-flex gap-2 mt-4">
-              <Button type="submit" variant="warning" disabled={loading}>{loading ? t('forms.saving') : t('stockOutForm.submit')}</Button>
-              <Button variant="outline-secondary" onClick={() => navigate('/inventory')}>{t('forms.cancel')}</Button>
-            </div>
-          </Form>
-        </Card.Body>
-      </Card>
+    <div className="space-y-8 max-w-4xl mx-auto pb-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <PageHeader
+        title="Inventory Stock-Out"
+        subtitle="Record stock issuance for farms, departments, or internal use."
+        backTo="/inventory"
+      />
+
+      {error && (
+        <Card className="bg-rose-50 border-rose-200">
+          <CardContent className="p-4 flex items-center gap-3 text-rose-800">
+            <X className="h-4 w-4 bg-rose-600 text-white rounded-full p-0.5" />
+            <p className="text-sm font-bold tracking-tight">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <Card className="border-none shadow-xl shadow-gray-100/50 rounded-3xl overflow-hidden bg-white">
+            <CardHeader className="bg-gray-50/50 border-b border-gray-100">
+              <CardTitle className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2 uppercase">
+                <ArrowDownRight className="h-5 w-5 text-rose-600" />
+                Issuance Details
+              </CardTitle>
+              <CardDescription className="text-xs font-bold text-gray-400">Specify what and how much is being issued</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Inventory Category</Label>
+                  <Select value={form.category || ''} onValueChange={v => setForm({ ...form, category: v, itemId: '' })}>
+                    <SelectTrigger className="h-14 bg-white border-2 border-gray-100 rounded-2xl focus:ring-rose-500 transition-all font-bold text-gray-700">
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-none shadow-2xl">
+                      {['FEED', 'DRUG', 'VACCINE', 'VITAMIN', 'EQUIPMENT', 'FARM_MATERIAL', 'CLEANING_MATERIAL', 'OFFICE_SUPPLY', 'CONSUMABLE'].map(c => (
+                        <SelectItem key={c} value={c} className="rounded-xl my-1 font-medium">{c.replace('_', ' ')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Inventory Item *</Label>
+                  <Select value={String(form.itemId)} onValueChange={v => setForm({ ...form, itemId: v })} disabled={!form.category}>
+                    <SelectTrigger className={cn(
+                      "h-14 bg-white border-2 border-gray-100 rounded-2xl focus:ring-rose-500 transition-all font-bold text-gray-700",
+                      !form.category && "opacity-50 cursor-not-allowed"
+                    )}>
+                      <SelectValue placeholder={form.category ? "Select item to issue" : "Select category first"} />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-none shadow-2xl">
+                      {items.filter(i => i.category === form.category).map(i => (
+                        <SelectItem key={i.id} value={String(i.id)} className="rounded-xl my-1 font-medium">
+                          {i.itemName} <span className="text-gray-400 ml-2 font-normal">(Left: {i.currentStock} {i.unit})</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                    <Box className="h-3 w-3" /> Quantity to Issue *
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    className="h-14 bg-white border-2 border-gray-100 rounded-2xl focus-visible:ring-rose-500 focus-visible:border-rose-500 transition-all font-bold text-gray-700"
+                    placeholder="0.00"
+                    value={form.quantity}
+                    onChange={e => setForm({ ...form, quantity: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                    <Layers className="h-3 w-3" /> Transaction Entity
+                  </Label>
+                  <Select value={form.issuedToType} onValueChange={v => setForm({ ...form, issuedToType: v, farmId: '', department: '' })}>
+                    <SelectTrigger className="h-14 bg-white border-2 border-gray-100 rounded-2xl focus:ring-rose-500 focus:border-rose-500 transition-all font-bold text-gray-700">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-none shadow-2xl">
+                      {['FARM', 'DEPARTMENT', 'CUSTOMER', 'INTERNAL', 'MEDICAL'].map(o => (
+                        <SelectItem key={o} value={o} className="rounded-xl my-1 font-medium">Issue to {o}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {form.issuedToType === 'FARM' && (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                      <Building2 className="h-3 w-3" /> Target Farm *
+                    </Label>
+                    <Select value={String(form.farmId)} onValueChange={v => setForm({ ...form, farmId: v })}>
+                      <SelectTrigger className="h-14 bg-white border-2 border-gray-100 rounded-2xl focus:ring-rose-500 focus:border-rose-500 transition-all font-bold text-gray-700">
+                        <SelectValue placeholder="Select farm location" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-none shadow-2xl">
+                        {farms.map(f => <SelectItem key={f.id} value={String(f.id)} className="rounded-xl my-1 font-medium">{f.farmName}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {form.issuedToType === 'DEPARTMENT' && (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                      <User className="h-3 w-3" /> Department Name *
+                    </Label>
+                    <Input
+                      className="h-14 bg-white border-2 border-gray-100 rounded-2xl focus-visible:ring-rose-500 focus-visible:border-rose-500 transition-all font-bold text-gray-700"
+                      value={form.department}
+                      onChange={e => setForm({ ...form, department: e.target.value })}
+                      placeholder="e.g. Broiler Section, Veterinary"
+                    />
+                  </div>
+                )}
+
+                {form.issuedToType === 'MEDICAL' && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                        <Stethoscope className="h-3 w-3" /> Linked Prescription
+                      </Label>
+                      <Select value={String(form.prescriptionId)} onValueChange={v => setForm({ ...form, prescriptionId: v, vaccinationId: '' })}>
+                        <SelectTrigger className="h-14 bg-white border-2 border-gray-100 rounded-2xl">
+                          <SelectValue placeholder="Select Prescription" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {prescriptions.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.drugName} (Prescribed: {p.prescriptionDate})</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                        <Syringe className="h-3 w-3" /> Linked Vaccination
+                      </Label>
+                      <Select value={String(form.vaccinationId)} onValueChange={v => setForm({ ...form, vaccinationId: v, prescriptionId: '' })}>
+                        <SelectTrigger className="h-14 bg-white border-2 border-gray-100 rounded-2xl">
+                          <SelectValue placeholder="Select Vaccination Task" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {vaccinations.map(v => <SelectItem key={v.id} value={String(v.id)}>{v.vaccineName} (Due: {v.scheduledDate})</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-xl shadow-gray-100/50 rounded-3xl overflow-hidden bg-white">
+            <CardHeader className="bg-gray-50/50 border-b border-gray-100">
+              <CardTitle className="text-sm font-black text-gray-900 tracking-tight uppercase">Audit & Reference</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-8 space-y-6">
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                  <FileText className="h-3 w-3" /> Reason / Purpose
+                </Label>
+                <Input
+                  className="h-14 bg-white border-2 border-gray-100 rounded-2xl focus-visible:ring-rose-500 focus-visible:border-rose-500 transition-all font-bold text-gray-700"
+                  value={form.reason}
+                  onChange={e => setForm({ ...form, reason: e.target.value })}
+                  placeholder="e.g. Scheduled vaccination, Emergency repair"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-8">
+          <Card className="border-none shadow-xl shadow-gray-100/50 rounded-3xl overflow-hidden bg-white">
+            <CardHeader className="bg-gray-50/50 border-b border-gray-100">
+              <CardTitle className="text-sm font-black text-gray-900 tracking-tight uppercase">Timeline & Log</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-8 space-y-6">
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                  <Calendar className="h-3 w-3" /> Transaction Date
+                </Label>
+                <Input
+                  type="date"
+                  className="h-14 bg-white border-2 border-gray-100 rounded-2xl focus-visible:ring-rose-500 focus-visible:border-rose-500 transition-all font-bold text-gray-700"
+                  value={form.movementDate}
+                  onChange={e => setForm({ ...form, movementDate: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-1.5">
+                  <Tag className="h-3 w-3" /> External Reference
+                </Label>
+                <Input
+                  className="h-14 bg-white border-2 border-gray-100 rounded-2xl focus-visible:ring-rose-500 focus-visible:border-rose-500 transition-all font-bold text-gray-700"
+                  value={form.referenceType}
+                  onChange={e => setForm({ ...form, referenceType: e.target.value })}
+                  placeholder="Requisition ID, Voucher #"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-slate-900 border-none shadow-2xl rounded-3xl overflow-hidden p-1">
+            <CardContent className="p-6 space-y-4">
+              <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50">
+                <div className="flex gap-3">
+                  <div className="p-2 bg-rose-500/10 rounded-lg">
+                    <Info className="h-4 w-4 text-rose-400" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-white uppercase tracking-tight">System Notice</p>
+                    <p className="text-[10px] text-slate-400 leading-relaxed font-medium">Issuing stock will reduce warehouse inventory balance. This operation is logged for financial auditing.</p>
+                  </div>
+                </div>
+              </div>
+              <Button type="submit" className="w-full h-14 bg-rose-600 hover:bg-rose-700 shadow-rose-900/20 shadow-xl rounded-2xl text-md font-black tracking-tight" disabled={loading}>
+                {loading ? 'Processing...' : (
+                  <>
+                    <Save className="mr-2 h-5 w-5" />
+                    Verify & Issue
+                  </>
+                )}
+              </Button>
+              <Button type="button" variant="ghost" className="w-full text-slate-400 hover:text-white hover:bg-slate-800 font-bold" onClick={() => navigate('/inventory')}>
+                Cancel Operation
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </form>
     </div>
   );
 };

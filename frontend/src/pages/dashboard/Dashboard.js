@@ -1,11 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { Row, Col } from 'react-bootstrap';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { dashboardApi } from '../../api';
-import StatCard from '../../components/common/StatCard';
-import { formatCurrency, ROLES } from '../../utils';
-import './Dashboard.css';
+import { ROLES, formatCurrency } from '../../utils';
+import AdminDashboard from './AdminDashboard';
+import StatsCard from '../../components/shared/StatsCard';
+import { Card, CardContent } from '../../components/ui/card';
+import { 
+  Building2, 
+  Users, 
+  Activity, 
+  Package, 
+  DollarSign, 
+  HeartPulse,
+  ShoppingCart,
+  TrendingUp,
+  AlertTriangle
+} from 'lucide-react';
 
 const Dashboard = () => {
   const { user, hasRole } = useAuth();
@@ -23,85 +34,200 @@ const Dashboard = () => {
         else if (hasRole(ROLES.VETERINARY_OFFICER)) res = await dashboardApi.vet();
         else if (hasRole(ROLES.PHARMACY_SALES)) res = await dashboardApi.pharmacy();
         else if (hasRole(ROLES.FINANCE_OFFICER)) res = await dashboardApi.finance();
-        if (res) setData(res.data.data);
+        if (res) setData(res.data.data || {});
       } catch (e) {
+        console.error('Failed to fetch dashboard data:', e);
       } finally {
         setLoading(false);
       }
     };
     fetchDashboard();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasRole]);
 
-  const adminCards = [
-    { title: t('dashboard.activeFarms'), value: data.totalFarms ?? '-', icon: 'Farm', color: 'success' },
-    { title: t('dashboard.activeFlocks'), value: data.totalActiveFlocks ?? '-', icon: 'Flocks', color: 'primary' },
-    { title: t('dashboard.todaysMortality'), value: data.todayMortality ?? 0, icon: 'Mortality', color: 'danger' },
-    { title: t('dashboard.todaysSales'), value: formatCurrency(data.todayPharmacySales), icon: 'Sales', color: 'info' },
-    { title: t('dashboard.totalRevenue'), value: formatCurrency(data.totalRevenue), icon: 'Revenue', color: 'success' },
-    { title: t('dashboard.totalExpenses'), value: formatCurrency(data.totalExpenses), icon: 'Expenses', color: 'warning' },
-    { title: t('dashboard.netProfitLoss'), value: formatCurrency(data.netProfitLoss), icon: 'Profit', color: data.netProfitLoss >= 0 ? 'success' : 'danger' },
-    { title: t('dashboard.openHealthReports'), value: data.openHealthReports ?? 0, icon: 'Health', color: 'danger' },
-    { title: t('dashboard.activeDiseaseCases'), value: data.activeDiseaseCases ?? 0, icon: 'Cases', color: 'warning' },
-    { title: t('dashboard.pendingPrescriptions'), value: data.pendingPrescriptions ?? 0, icon: 'Rx', color: 'primary' },
-    { title: t('dashboard.pendingAlerts'), value: data.pendingAlerts ?? 0, icon: 'Alerts', color: 'warning' },
-  ];
+  // Show Admin Dashboard for admin users
+  if (hasRole(ROLES.ADMIN, ROLES.GENERAL_MANAGER)) {
+    return <AdminDashboard />;
+  }
 
   const farmCards = [
-    { title: t('dashboard.activeFarms'), value: data.totalFarms ?? '-', icon: 'Farm', color: 'success' },
-    { title: t('dashboard.activeFlocks'), value: data.activeFlocks ?? '-', icon: 'Flocks', color: 'primary' },
-    { title: t('dashboard.todaysMortality'), value: data.todayMortality ?? 0, icon: 'Mortality', color: 'danger' },
-    { title: t('dashboard.upcomingVaccinations'), value: data.upcomingVaccinations ?? 0, icon: 'Vaccines', color: 'info' },
-    { title: t('dashboard.openHealthReports'), value: data.openHealthReports ?? 0, icon: 'Health', color: 'warning' },
+    {
+      title: t('dashboard.activeFarms'),
+      value: data.totalFarms ?? '-',
+      icon: Building2,
+      iconColor: 'text-green-600',
+      bgColor: 'bg-green-50'
+    },
+    {
+      title: t('dashboard.activeFlocks'),
+      value: data.activeFlocks ?? '-',
+      icon: Users,
+      iconColor: 'text-blue-600',
+      bgColor: 'bg-blue-50'
+    },
+    {
+      title: t('dashboard.todaysMortality'),
+      value: data.todayMortality ?? 0,
+      icon: Activity,
+      iconColor: 'text-red-600',
+      bgColor: 'bg-red-50'
+    },
+    {
+      title: t('dashboard.upcomingVaccinations'),
+      value: data.upcomingVaccinations ?? 0,
+      icon: HeartPulse,
+      iconColor: 'text-purple-600',
+      bgColor: 'bg-purple-50'
+    },
+    {
+      title: t('dashboard.openHealthReports'),
+      value: data.openHealthReports ?? 0,
+      icon: AlertTriangle,
+      iconColor: 'text-orange-600',
+      bgColor: 'bg-orange-50'
+    },
   ];
 
   const storeCards = [
-    { title: t('dashboard.totalItems'), value: data.totalItems ?? '-', icon: 'Inventory', color: 'primary' },
-    { title: t('dashboard.expiringItems'), value: data.expiringItems ?? 0, icon: 'Expiry', color: 'warning' },
+    {
+      title: t('dashboard.totalItems'),
+      value: data.totalItems ?? '-',
+      icon: Package,
+      iconColor: 'text-blue-600',
+      bgColor: 'bg-blue-50'
+    },
+    {
+      title: t('dashboard.expiringItems'),
+      value: data.expiringItems ?? 0,
+      icon: AlertTriangle,
+      iconColor: 'text-orange-600',
+      bgColor: 'bg-orange-50'
+    },
   ];
 
   const vetCards = [
-    { title: t('dashboard.upcomingVaccinations'), value: data.upcomingVaccinations ?? 0, icon: 'Vaccines', color: 'primary' },
-    { title: t('dashboard.missedVaccinations'), value: data.missedVaccinations ?? 0, icon: 'Missed', color: 'danger' },
-    { title: t('dashboard.activeDiseaseCases'), value: data.activeDiseaseCases ?? 0, icon: 'Cases', color: 'warning' },
-    { title: t('dashboard.openHealthReports'), value: data.openHealthReports ?? 0, icon: 'Health', color: 'danger' },
-    { title: t('dashboard.pendingPrescriptions'), value: data.pendingPrescriptions ?? 0, icon: 'Rx', color: 'info' },
+    {
+      title: t('dashboard.upcomingVaccinations'),
+      value: data.upcomingVaccinations ?? 0,
+      icon: HeartPulse,
+      iconColor: 'text-blue-600',
+      bgColor: 'bg-blue-50'
+    },
+    {
+      title: t('dashboard.missedVaccinations'),
+      value: data.missedVaccinations ?? 0,
+      icon: AlertTriangle,
+      iconColor: 'text-red-600',
+      bgColor: 'bg-red-50'
+    },
+    {
+      title: t('dashboard.activeDiseaseCases'),
+      value: data.activeDiseaseCases ?? 0,
+      icon: Activity,
+      iconColor: 'text-orange-600',
+      bgColor: 'bg-orange-50'
+    },
+    {
+      title: t('dashboard.openHealthReports'),
+      value: data.openHealthReports ?? 0,
+      icon: AlertTriangle,
+      iconColor: 'text-red-600',
+      bgColor: 'bg-red-50'
+    },
+    {
+      title: t('dashboard.pendingPrescriptions'),
+      value: data.pendingPrescriptions ?? 0,
+      icon: TrendingUp,
+      iconColor: 'text-purple-600',
+      bgColor: 'bg-purple-50'
+    },
   ];
 
   const pharmacyCards = [
-    { title: t('dashboard.todaysSales'), value: formatCurrency(data.todaySales), icon: 'Sales', color: 'success' },
-    { title: t('dashboard.totalSales'), value: data.totalSalesCount ?? 0, icon: 'Receipts', color: 'primary' },
-    { title: t('dashboard.pendingPrescriptions'), value: data.pendingPrescriptions ?? 0, icon: 'Rx', color: 'warning' },
-    { title: t('dashboard.internalDrugUsage'), value: data.internalDrugUsage ?? 0, icon: 'Usage', color: 'info' },
+    {
+      title: t('dashboard.todaysSales'),
+      value: formatCurrency(data.todaySales),
+      icon: DollarSign,
+      iconColor: 'text-green-600',
+      bgColor: 'bg-green-50'
+    },
+    {
+      title: t('dashboard.totalSales'),
+      value: data.totalSalesCount ?? 0,
+      icon: ShoppingCart,
+      iconColor: 'text-blue-600',
+      bgColor: 'bg-blue-50'
+    },
+    {
+      title: t('dashboard.pendingPrescriptions'),
+      value: data.pendingPrescriptions ?? 0,
+      icon: TrendingUp,
+      iconColor: 'text-orange-600',
+      bgColor: 'bg-orange-50'
+    },
+    {
+      title: t('dashboard.internalDrugUsage'),
+      value: data.internalDrugUsage ?? 0,
+      icon: Package,
+      iconColor: 'text-purple-600',
+      bgColor: 'bg-purple-50'
+    },
   ];
 
   const financeCards = [
-    { title: t('dashboard.totalIncome'), value: formatCurrency(data.totalIncome), icon: 'Income', color: 'success' },
-    { title: t('dashboard.totalExpenses'), value: formatCurrency(data.totalExpenses), icon: 'Expenses', color: 'danger' },
-    { title: t('dashboard.netProfitLoss'), value: formatCurrency(data.netProfitLoss), icon: 'Profit', color: 'primary' },
+    {
+      title: t('dashboard.totalIncome'),
+      value: formatCurrency(data.totalIncome),
+      icon: DollarSign,
+      iconColor: 'text-green-600',
+      bgColor: 'bg-green-50'
+    },
+    {
+      title: t('dashboard.totalExpenses'),
+      value: formatCurrency(data.totalExpenses),
+      icon: AlertTriangle,
+      iconColor: 'text-red-600',
+      bgColor: 'bg-red-50'
+    },
+    {
+      title: t('dashboard.netProfitLoss'),
+      value: formatCurrency(data.netProfitLoss),
+      icon: TrendingUp,
+      iconColor: data.netProfitLoss >= 0 ? 'text-green-600' : 'text-red-600',
+      bgColor: data.netProfitLoss >= 0 ? 'bg-green-50' : 'bg-red-50'
+    },
   ];
 
   let cards = [];
-  if (hasRole(ROLES.ADMIN, ROLES.GENERAL_MANAGER)) cards = adminCards;
-  else if (hasRole(ROLES.FARM_MANAGER, ROLES.OPERATIONS_MANAGER)) cards = farmCards;
+  if (hasRole(ROLES.FARM_MANAGER, ROLES.OPERATIONS_MANAGER)) cards = farmCards;
   else if (hasRole(ROLES.STORE_KEEPER)) cards = storeCards;
   else if (hasRole(ROLES.VETERINARY_OFFICER)) cards = vetCards;
   else if (hasRole(ROLES.PHARMACY_SALES)) cards = pharmacyCards;
   else if (hasRole(ROLES.FINANCE_OFFICER)) cards = financeCards;
 
   return (
-    <div className="dashboard-page">
-      <h5 className="fw-bold mb-1 dashboard-title">{t('dashboard.title')}</h5>
-      <p className="small mb-4 dashboard-subtitle">{t('dashboard.welcomeBack', { name: user?.fullName || '' })}</p>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">{t('dashboard.title')}</h1>
+        <p className="text-gray-500 mt-1">{t('dashboard.welcomeBack', { name: user?.fullName || '' })}</p>
+      </div>
+      
       {loading ? (
-        <p className="dashboard-subtitle">{t('common.loading')}</p>
+        <Card>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-32 bg-gray-100 rounded-lg animate-pulse" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       ) : (
-        <Row className="g-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {cards.map((card, i) => (
-            <Col key={i} xs={12} sm={6} lg={3}>
-              <StatCard {...card} />
-            </Col>
+            <StatsCard key={i} {...card} />
           ))}
-        </Row>
+        </div>
       )}
     </div>
   );

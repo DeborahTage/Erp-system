@@ -176,6 +176,8 @@ Trust ERP/
 - Low stock triggers notification when below minimum level
 - Pharmacy sale automatically reduces inventory stock
 - Pharmacy sale automatically creates a Finance income transaction
+- **NEW**: Veterinary prescriptions trigger a real-time fulfillment queue for pharmacists
+- **NEW**: Dispensing clinical stock automatically creates a Finance `EXPENSE` transaction tagged to the specific flock for accurate COGS
 - Missed vaccinations are auto-detected by daily scheduled job (6 AM)
 - CRM follow-ups due today or overdue are highlighted
 

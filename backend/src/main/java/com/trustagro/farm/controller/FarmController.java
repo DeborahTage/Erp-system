@@ -3,6 +3,8 @@ package com.trustagro.farm.controller;
 import com.trustagro.common.response.ApiResponse;
 import com.trustagro.farm.dto.FarmRequest;
 import com.trustagro.farm.dto.FarmResponse;
+import com.trustagro.farm.dto.BiosecurityProtocolRequest;
+import com.trustagro.farm.dto.BiosecurityProtocolResponse;
 import com.trustagro.farm.entity.FarmStatus;
 import com.trustagro.farm.service.FarmService;
 import jakarta.validation.Valid;
@@ -47,5 +49,18 @@ public class FarmController {
     @PreAuthorize("hasAnyRole('ADMIN','GENERAL_MANAGER')")
     public ResponseEntity<ApiResponse<FarmResponse>> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return ResponseEntity.ok(ApiResponse.success(farmService.updateStatus(id, FarmStatus.valueOf(body.get("status")))));
+    }
+
+    @GetMapping("/{id}/biosecurity")
+    @PreAuthorize("hasAnyRole('ADMIN','GENERAL_MANAGER','FARM_MANAGER','VETERINARY_OFFICER')")
+    public ResponseEntity<ApiResponse<List<BiosecurityProtocolResponse>>> getBiosecurityLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(farmService.getBiosecurityLogs(id)));
+    }
+
+    @PostMapping("/{id}/biosecurity")
+    @PreAuthorize("hasAnyRole('ADMIN','FARM_MANAGER','VETERINARY_OFFICER','SECURITY_GUARD')")
+    public ResponseEntity<ApiResponse<BiosecurityProtocolResponse>> logBiosecurity(@PathVariable Long id, @Valid @RequestBody BiosecurityProtocolRequest req) {
+        req.setFarmId(id);
+        return ResponseEntity.ok(ApiResponse.success("Biosecurity log created", farmService.logBiosecurity(req)));
     }
 }

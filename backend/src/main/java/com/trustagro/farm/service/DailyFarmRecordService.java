@@ -30,6 +30,8 @@ public class DailyFarmRecordService {
     private final FlockRepository flockRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final com.trustagro.feed.service.FeedService feedService;
+    private final com.trustagro.veterinary.repository.DiseaseCaseRepository diseaseCaseRepository;
 
     @Value("${app.alerts.mortality-threshold}")
     private double mortalityThreshold;
@@ -66,6 +68,11 @@ public class DailyFarmRecordService {
         userRepository.findByEmail(email).ifPresent(record::setRecordedBy);
 
         DailyFarmRecord saved = recordRepository.save(record);
+
+        // Consume feed from silo if provided
+        if (req.getSiloId() != null && req.getFeedConsumed() != null) {
+            feedService.consumeFeed(req.getSiloId(), req.getFeedConsumed().doubleValue());
+        }
 
         // Update flock current bird count
         int newCount = (flock.getCurrentBirdCount() != null ? flock.getCurrentBirdCount() : flock.getInitialBirdCount())
@@ -108,6 +115,18 @@ public class DailyFarmRecordService {
         record.setEggProduction(req.getEggProduction());
         record.setDamagedEggs(req.getDamagedEggs());
         record.setSymptomsOrRemarks(req.getSymptomsOrRemarks());
+        record.setMortalityCause(req.getMortalityCause());
+        record.setMortalityNotes(req.getMortalityNotes());
+        record.setBarnPhotoUrl(req.getBarnPhotoUrl());
+
+        if (req.getDiseaseCaseId() != null) {
+            diseaseCaseRepository.findById(req.getDiseaseCaseId()).ifPresent(record::setDiseaseCase);
+        }
+        if (req.getSiloId() != null) {
+            com.trustagro.feed.entity.Silo silo = new com.trustagro.feed.entity.Silo();
+            silo.setId(req.getSiloId());
+            record.setSilo(silo);
+        }
     }
 
     private DailyFarmRecord findById(Long id) {
@@ -132,6 +151,11 @@ public class DailyFarmRecordService {
         res.setEggProduction(r.getEggProduction());
         res.setDamagedEggs(r.getDamagedEggs());
         res.setSymptomsOrRemarks(r.getSymptomsOrRemarks());
+        res.setMortalityCause(r.getMortalityCause());
+        res.setMortalityNotes(r.getMortalityNotes());
+        res.setBarnPhotoUrl(r.getBarnPhotoUrl());
+        if (r.getDiseaseCase() != null) res.setDiseaseCaseId(r.getDiseaseCase().getId());
+        if (r.getSilo() != null) res.setSiloId(r.getSilo().getId());
         if (r.getRecordedBy() != null) res.setRecordedBy(r.getRecordedBy().getFullName());
         if (r.getMortality() != null && r.getOpeningBirdCount() != null && r.getOpeningBirdCount() > 0)
             res.setMortalityRate((double) r.getMortality() / r.getOpeningBirdCount() * 100);

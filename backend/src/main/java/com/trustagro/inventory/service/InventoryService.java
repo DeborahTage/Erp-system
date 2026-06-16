@@ -1,216 +1,501 @@
 package com.trustagro.inventory.service;
 
-import com.trustagro.common.exception.BusinessException;
-import com.trustagro.common.exception.ResourceNotFoundException;
+import com.trustagro.finance.entity.FinanceTransaction;
+import com.trustagro.finance.entity.TransactionType;
+import com.trustagro.finance.repository.FinanceTransactionRepository;
 import com.trustagro.inventory.dto.*;
 import com.trustagro.inventory.entity.*;
 import com.trustagro.inventory.repository.*;
-import com.trustagro.notification.service.NotificationService;
-import com.trustagro.user.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import com.trustagro.notification.entity.Notification;
+import com.trustagro.notification.entity.NotificationType;
+import com.trustagro.notification.repository.NotificationRepository;
+import com.trustagro.user.entity.Role;
+import com.trustagro.user.entity.User;
+import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import com.trustagro.user.repository.UserRepository;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
-@RequiredArgsConstructor
 public class InventoryService {
+
+    private static final Logger log = LoggerFactory.getLogger(InventoryService.class);
 
     private final InventoryItemRepository itemRepository;
     private final StockBatchRepository batchRepository;
     private final StockMovementRepository movementRepository;
+    private final PurchaseOrderRepository poRepository;
+    private final PurchaseOrderItemRepository poItemRepository;
+    private final DemandForecastRepository forecastRepository;
+    private final NotificationRepository notificationRepository;
+    private final FinanceTransactionRepository financeTransactionRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
 
-    @Value("${app.alerts.expiry-warning-days}")
-    private int expiryWarningDays;
-
-    public List<InventoryItemResponse> getAllItems() {
-        return itemRepository.findAll().stream().map(this::toItemResponse).collect(Collectors.toList());
+    public InventoryService(InventoryItemRepository itemRepository, 
+                            StockBatchRepository batchRepository,
+                            StockMovementRepository movementRepository,
+                            PurchaseOrderRepository poRepository,
+                            PurchaseOrderItemRepository poItemRepository,
+                            DemandForecastRepository forecastRepository,
+                            NotificationRepository notificationRepository,
+                            FinanceTransactionRepository financeTransactionRepository,
+                            UserRepository userRepository) {
+        this.itemRepository = itemRepository;
+        this.batchRepository = batchRepository;
+        this.movementRepository = movementRepository;
+        this.poRepository = poRepository;
+        this.poItemRepository = poItemRepository;
+        this.forecastRepository = forecastRepository;
+        this.notificationRepository = notificationRepository;
+        this.financeTransactionRepository = financeTransactionRepository;
+        this.userRepository = userRepository;
     }
 
-    public InventoryItemResponse getItemById(Long id) {
-        return toItemResponse(findItemById(id));
-    }
+    // ============================================================
+    // BARCODE / RFID SCANNING
+    // ============================================================
 
-    public InventoryItemResponse createItem(InventoryItemRequest req) {
-        InventoryItem item = new InventoryItem();
-        item.setItemName(req.getItemName());
-        item.setCategory(req.getCategory());
-        item.setUnit(req.getUnit());
-        item.setMinimumStockLevel(req.getMinimumStockLevel());
-        item.setExpiryRequired(req.isExpiryRequired());
-        return toItemResponse(itemRepository.save(item));
-    }
-
-    public InventoryItemResponse updateItem(Long id, InventoryItemRequest req) {
-        InventoryItem item = findItemById(id);
-        item.setItemName(req.getItemName());
-        item.setCategory(req.getCategory());
-        item.setUnit(req.getUnit());
-        item.setMinimumStockLevel(req.getMinimumStockLevel());
-        item.setExpiryRequired(req.isExpiryRequired());
-        return toItemResponse(itemRepository.save(item));
-    }
-
-    @Transactional
-    public void stockIn(StockInRequest req) {
-        InventoryItem item = findItemById(req.getItemId());
-        StockBatch batch = new StockBatch();
-        batch.setItem(item);
-        batch.setBatchNumber(req.getBatchNumber());
-        batch.setQuantityReceived(req.getQuantity());
-        batch.setQuantityRemaining(req.getQuantity());
-        batch.setUnitCost(req.getUnitCost());
-        batch.setSupplier(req.getSupplier());
-        batch.setExpiryDate(req.getExpiryDate());
-        batch.setDateReceived(req.getDateReceived() != null ? req.getDateReceived() : LocalDate.now());
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        userRepository.findByEmail(email).ifPresent(batch::setReceivedBy);
-        batchRepository.save(batch);
-
-        recordMovement(
-                item,
-                MovementType.STOCK_IN,
-                req.getQuantity(),
-                "Stock In",
-                null,
-                null,
-                null,
-                null,
-                null,
-                batch.getDateReceived()
-        );
-        checkExpiryAlert(batch, item.getItemName());
-    }
-
-    @Transactional
-    public void stockOut(StockOutRequest req) {
-        InventoryItem item = findItemById(req.getItemId());
-        double totalAvailable = batchRepository.getTotalStock(item.getId());
-        if (totalAvailable < req.getQuantity())
-            throw new BusinessException("Insufficient stock. Available: " + totalAvailable);
+    public Map<String, Object> scanItem(String barcode, User user) {
+        InventoryItem item = itemRepository.findByBarcodeOrRfidTag(barcode, barcode)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found for barcode: " + barcode));
 
         List<StockBatch> batches = batchRepository.findAvailableBatchesFEFO(item.getId(), LocalDate.now());
-        double remaining = req.getQuantity();
-        for (StockBatch batch : batches) {
-            if (remaining <= 0) break;
-            double deduct = Math.min(batch.getQuantityRemaining(), remaining);
-            batch.setQuantityRemaining(batch.getQuantityRemaining() - deduct);
-            batchRepository.save(batch);
-            remaining -= deduct;
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("item", item);
+        result.put("batches", batches);
+        result.put("scannedAt", LocalDateTime.now());
+        result.put("scannedBy", user != null ? user.getFullName() : "System");
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> processScanAction(Map<String, Object> scanData, User user) {
+        String action = (String) scanData.get("action");
+        String barcode = (String) scanData.get("barcode");
+        Double quantity = Double.valueOf(scanData.get("quantity").toString());
+
+        Map<String, Object> scanned = scanItem(barcode, user);
+        InventoryItem item = (InventoryItem) scanned.get("item");
+
+        return switch (action) {
+            case "RECEIVE" -> stockIn(item.getId(), quantity, scanData, user);
+            case "ISSUE" -> stockOut(item.getId(), quantity, "ISSUE", null, user);
+            case "COUNT" -> recordCount(item.getId(), quantity, user);
+            default -> throw new IllegalArgumentException("Unknown action: " + action);
+        };
+    }
+
+    // ============================================================
+    // STOCK IN (RECEIPT)
+    // ============================================================
+
+    @Transactional
+    public Map<String, Object> stockIn(Long itemId, Double quantity, Map<String, Object> data, User user) {
+        InventoryItem item = itemRepository.findById(itemId).orElseThrow();
+
+        StockBatch batch = new StockBatch();
+        batch.setItem(item);
+        Object batchObj = data.get("batchNumber");
+        String batchNum = (batchObj != null && !batchObj.toString().trim().isEmpty())
+                ? batchObj.toString()
+                : "BATCH-" + System.currentTimeMillis();
+        batch.setBatchNumber(batchNum);
+        batch.setQuantityReceived(quantity);
+        batch.setQuantityRemaining(quantity);
+        
+        Object unitCostObj = data.get("unitCost");
+        batch.setUnitCost((unitCostObj != null && !unitCostObj.toString().trim().isEmpty()) 
+                ? new BigDecimal(unitCostObj.toString()) : null);
+                
+        Object expiryObj = data.get("expiryDate");
+        if (expiryObj != null && !expiryObj.toString().trim().isEmpty()) {
+            batch.setExpiryDate(LocalDate.parse(expiryObj.toString()));
+        }
+        batch.setReceivedDate(LocalDate.now());
+        batch.setReceivedBy(user);
+        batch.setStatus(BatchStatus.AVAILABLE);
+        batch.setStorageZone(data.getOrDefault("storageZone", "").toString());
+        batch.setShelfLocation(data.getOrDefault("shelfLocation", "").toString());
+        batchRepository.save(batch);
+
+        // Update item stock and weighted avg cost
+        double newStock = (item.getCurrentStock() != null ? item.getCurrentStock() : 0.0) + quantity;
+        if (batch.getUnitCost() != null) {
+            double oldValue = (item.getCurrentStock() != null ? item.getCurrentStock() : 0.0)
+                    * (item.getAvgUnitCost() != null ? item.getAvgUnitCost().doubleValue() : 0.0);
+            double newValue = quantity * batch.getUnitCost().doubleValue();
+            item.setAvgUnitCost(BigDecimal.valueOf((oldValue + newValue) / newStock));
+            item.setLastPurchasePrice(batch.getUnitCost());
+        }
+        item.setCurrentStock(newStock);
+        itemRepository.save(item);
+
+        // Log movement
+        StockMovement movement = new StockMovement();
+        movement.setItem(item);
+        movement.setBatch(batch);
+        movement.setMovementType(MovementType.RECEIPT);
+        movement.setQuantity(quantity);
+        movement.setUnitCost(batch.getUnitCost());
+        movement.setTotalCost(batch.getUnitCost() != null ? batch.getUnitCost().multiply(BigDecimal.valueOf(quantity)) : null);
+        movement.setToLocation(batch.getStorageZone() + "-" + batch.getShelfLocation());
+        movement.setCreatedBy(user);
+        movementRepository.save(movement);
+
+        // Auto-create finance expense entry for purchase cost
+        if (batch.getUnitCost() != null && batch.getUnitCost().compareTo(java.math.BigDecimal.ZERO) > 0) {
+            try {
+                FinanceTransaction expense = new FinanceTransaction();
+                expense.setTransactionType(com.trustagro.finance.entity.TransactionType.EXPENSE);
+                expense.setCategory("Inventory Purchase");
+                expense.setAmount(batch.getUnitCost().multiply(java.math.BigDecimal.valueOf(quantity)));
+                expense.setTransactionDate(LocalDate.now());
+                expense.setReferenceType("STOCK_BATCH");
+                expense.setReferenceId(batch.getId());
+                expense.setDescription("Stock receipt: " + item.getItemName() + " x" + quantity + " @ " + batch.getUnitCost() + " ETB");
+                expense.setDepartment("Inventory");
+                expense.setRecordedBy(user);
+                financeTransactionRepository.save(expense);
+            } catch (Exception ex) {
+                log.warn("Finance entry for stock-in failed (non-fatal): {}", ex.getMessage());
+            }
         }
 
-        recordMovement(
-                item,
-                MovementType.STOCK_OUT,
-                req.getQuantity(),
-                req.getReason(),
-                req.getIssuedToType(),
-                req.getFarmId(),
-                req.getDepartment(),
-                req.getReferenceType(),
-                req.getReferenceId(),
-                req.getMovementDate() != null ? req.getMovementDate() : LocalDate.now()
-        );
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("batchId", batch.getId());
+        result.put("newStock", newStock);
+        return result;
+    }
 
-        checkLowStockAlert(item);
+    // ============================================================
+    // STOCK OUT (FEFO / FIFO)
+    // ============================================================
+
+    @Transactional
+    public Map<String, Object> stockOut(Long itemId, Double quantity, String reason, Long referenceId, User user) {
+        InventoryItem item = itemRepository.findById(itemId).orElseThrow();
+        List<StockBatch> batches = batchRepository.findAvailableBatchesFEFO(itemId, LocalDate.now());
+
+        double remaining = quantity;
+        List<StockMovement> movements = new ArrayList<>();
+
+        for (StockBatch batch : batches) {
+            if (remaining <= 0) break;
+            double deduct = Math.min(remaining, batch.getQuantityRemaining());
+            remaining -= deduct;
+            batch.setQuantityRemaining(batch.getQuantityRemaining() - deduct);
+            batchRepository.save(batch);
+
+            StockMovement mv = new StockMovement();
+            mv.setItem(item);
+            mv.setBatch(batch);
+            mv.setMovementType("SALE".equals(reason) ? MovementType.SALE : MovementType.ISSUE);
+            mv.setQuantity(deduct);
+            mv.setUnitCost(batch.getUnitCost());
+            mv.setTotalCost(batch.getUnitCost() != null ? batch.getUnitCost().multiply(BigDecimal.valueOf(deduct)) : null);
+            mv.setReferenceId(referenceId);
+            mv.setCreatedBy(user);
+            movements.add(mv);
+        }
+
+        if (remaining > 0) {
+            throw new IllegalStateException("Insufficient stock for item " + item.getItemName());
+        }
+
+        double newStock = (item.getCurrentStock() != null ? item.getCurrentStock() : 0.0) - quantity;
+        item.setCurrentStock(newStock);
+        itemRepository.save(item);
+        movementRepository.saveAll(movements);
+
+        // Auto-create COGS finance entry for sales
+        if ("SALE".equals(reason)) {
+            try {
+                double totalCogs = movements.stream()
+                        .mapToDouble(m -> m.getTotalCost() != null ? m.getTotalCost().doubleValue() : 0.0)
+                        .sum();
+                if (totalCogs > 0) {
+                    FinanceTransaction cogs = new FinanceTransaction();
+                    cogs.setTransactionType(com.trustagro.finance.entity.TransactionType.EXPENSE);
+                    cogs.setCategory("COGS");
+                    cogs.setAmount(java.math.BigDecimal.valueOf(totalCogs));
+                    cogs.setTransactionDate(LocalDate.now());
+                    cogs.setReferenceType("STOCK_OUT");
+                    cogs.setDescription("Cost of goods sold: " + item.getItemName() + " x" + quantity);
+                    cogs.setDepartment("Inventory");
+                    cogs.setRecordedBy(user);
+                    financeTransactionRepository.save(cogs);
+                }
+            } catch (Exception ex) {
+                log.warn("Finance COGS entry for stock-out failed (non-fatal): {}", ex.getMessage());
+            }
+        }
+
+        // Check if we need to auto-reorder
+        if (item.getReorderPoint() != null && newStock <= item.getReorderPoint()) {
+            createAutoReorder(item, user);
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("deducted", quantity);
+        result.put("newStock", newStock);
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> stockOut(StockOutRequest req) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByEmail(email).orElse(null);
+        return stockOut(req.getItemId(), req.getQuantity(), req.getReason(), req.getReferenceId(), currentUser);
+    }
+
+    // ============================================================
+    // AUTO REORDER
+    // ============================================================
+
+    @Transactional
+    public void createAutoReorder(InventoryItem item, User user) {
+        try {
+            Supplier supplier = item.getPreferredSupplier() != null ? item.getPreferredSupplier() : item.getSupplier();
+            if (supplier == null) {
+                log.warn("Cannot create auto-reorder for {} — no supplier linked", item.getItemName());
+                return;
+            }
+
+            PurchaseOrder po = new PurchaseOrder();
+            po.setPoNumber("AUTO-PO-" + System.currentTimeMillis());
+            po.setSupplier(supplier);
+            po.setStatus("Draft");
+            po.setCreatedBy(user);
+            po = poRepository.save(po);
+
+            PurchaseOrderItem poItem = new PurchaseOrderItem();
+            poItem.setPurchaseOrder(po);
+            poItem.setItem(item);
+            poItem.setQuantityOrdered(item.getReorderQty() != null ? item.getReorderQty() : 100.0);
+            poItem.setUnitPrice(item.getLastPurchasePrice());
+            if (poItem.getUnitPrice() != null && poItem.getQuantityOrdered() != null) {
+                poItem.setLineTotal(poItem.getUnitPrice().multiply(BigDecimal.valueOf(poItem.getQuantityOrdered())));
+            }
+            poItemRepository.save(poItem);
+
+            // Send notification to store keeper
+            Notification notif = new Notification();
+            notif.setTitle("Auto Reorder Generated");
+            notif.setMessage(item.getItemName() + " hit reorder point. PO " + po.getPoNumber() + " created.");
+            notif.setType(NotificationType.SYSTEM);
+            notif.setTargetRole(Role.STORE_KEEPER);
+            notificationRepository.save(notif);
+
+            log.info("Auto-reorder PO {} created for item {}", po.getPoNumber(), item.getItemName());
+        } catch (Exception e) {
+            log.error("Failed to create auto-reorder: {}", e.getMessage());
+        }
+    }
+
+    // ============================================================
+    // CYCLE COUNT
+    // ============================================================
+
+    @Transactional
+    public Map<String, Object> recordCount(Long itemId, Double countedQty, User user) {
+        InventoryItem item = itemRepository.findById(itemId).orElseThrow();
+
+        InventoryCount count = new InventoryCount();
+        count.setItem(item);
+        count.setExpectedQty(item.getCurrentStock() != null ? item.getCurrentStock() : 0.0);
+        count.setCountedQty(countedQty);
+        count.setCountDate(LocalDate.now());
+        count.setCountedBy(user);
+        count.setStatus("Pending");
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("variance", countedQty - count.getExpectedQty());
+        result.put("expectedQty", count.getExpectedQty());
+        result.put("countedQty", countedQty);
+        return result;
+    }
+
+    // ============================================================
+    // DEMAND FORECASTING (Moving Average)
+    // ============================================================
+
+    @Transactional
+    public Map<String, Object> generateForecast(Long itemId) {
+        InventoryItem item = itemRepository.findById(itemId).orElseThrow();
+
+        // Get 90 days of SALE movements as a proxy for demand
+        List<StockMovement> sales = movementRepository.findRecentSalesByItemId(itemId, LocalDate.now().minusDays(90).atStartOfDay());
+
+        double totalSold = sales.stream().mapToDouble(StockMovement::getQuantity).sum();
+        double avgMonthly = totalSold / 3.0; // 3 months
+        double trend = 0;
+
+        if (sales.size() > 1) {
+            double first = sales.get(0).getQuantity();
+            double last = sales.get(sales.size() - 1).getQuantity();
+            trend = (last - first) / sales.size();
+        }
+
+        double predicted = Math.max(0, avgMonthly + trend);
+        double confidence = Math.min(0.95, sales.size() / 30.0);
+
+        DemandForecast forecast = new DemandForecast();
+        forecast.setItem(item);
+        forecast.setForecastPeriod("monthly");
+        forecast.setForecastDate(LocalDate.now());
+        forecast.setPredictedDemand(predicted);
+        forecast.setConfidenceScore(confidence);
+        forecast.setAlgorithmUsed("moving_average");
+        forecastRepository.save(forecast);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("item", item.getItemName());
+        result.put("predictedDemand", predicted);
+        result.put("trend", trend);
+        result.put("confidenceScore", confidence);
+        result.put("recommendedOrder", Math.max(0, predicted - (item.getCurrentStock() != null ? item.getCurrentStock() : 0.0)));
+        return result;
+    }
+
+    // ============================================================
+    // STATS FOR DASHBOARD
+    // ============================================================
+
+    public Map<String, Object> getDashboardStats() {
+        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+        LocalDateTime weekAgo = LocalDate.now().minusDays(7).atStartOfDay();
+
+        long totalSkus = itemRepository.count();
+        double totalValue = itemRepository.findAll().stream()
+                .mapToDouble(i -> (i.getCurrentStock() != null ? i.getCurrentStock() : 0.0)
+                        * (i.getAvgUnitCost() != null ? i.getAvgUnitCost().doubleValue() : 0.0))
+                .sum();
+        
+        long todayStockInCount = movementRepository.countByMovementTypeAndCreatedAtAfter(MovementType.RECEIPT, todayStart);
+        long todayStockOutCount = movementRepository.countByMovementTypeAndCreatedAtAfter(MovementType.ISSUE, todayStart) 
+                                + movementRepository.countByMovementTypeAndCreatedAtAfter(MovementType.SALE, todayStart);
+
+        List<InventoryItemResponse> lowStock = itemRepository.findAll().stream()
+                .filter(i -> i.getReorderPoint() != null && i.getCurrentStock() != null && i.getCurrentStock() <= i.getReorderPoint())
+                .map(this::mapToResponse)
+                .toList();
+
+        List<StockBatch> expiring = batchRepository.findExpiringBatches(LocalDate.now(), LocalDate.now().plusDays(30));
+        
+        List<Map<String, Object>> expiringMap = expiring.stream().map(b -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("item_name", b.getItem().getItemName());
+            m.put("batch_number", b.getBatchNumber());
+            m.put("quantity_remaining", b.getQuantityRemaining());
+            m.put("expiry_date", b.getExpiryDate());
+            return m;
+        }).toList();
+
+        // Recent Stock In (Detailed for the new table)
+        List<Map<String, Object>> recentStockIn = movementRepository.findLatestStockIn(org.springframework.data.domain.PageRequest.of(0, 10))
+                .stream().map(m -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("date", m.getCreatedAt());
+                    map.put("item", m.getItem().getItemName());
+                    map.put("batch", m.getBatch() != null ? m.getBatch().getBatchNumber() : "N/A");
+                    map.put("quantity", m.getQuantity());
+                    map.put("warehouse", m.getBatch() != null ? m.getBatch().getStorageZone() : "N/A");
+                    map.put("supplier", m.getItem().getSupplier() != null ? m.getItem().getSupplier().getName() : "N/A");
+                    return map;
+                }).toList();
+
+        // Movement Trend Data (Last 7 days)
+        List<Object[]> inTrend = movementRepository.findDailyMovements(MovementType.RECEIPT, weekAgo);
+        List<Object[]> outTrend = movementRepository.findDailyMovements(MovementType.SALE, weekAgo); // Simplification: Sales only for trend or combined
+
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("total_skus", totalSkus);
+        stats.put("total_value", totalValue);
+        stats.put("today_stock_in", todayStockInCount);
+        stats.put("today_stock_out", todayStockOutCount);
+        stats.put("low_stock_count", lowStock.size());
+        stats.put("expiring_count", expiringMap.size());
+        
+        stats.put("low_stock", lowStock);
+        stats.put("expiring", expiringMap);
+        stats.put("recent_stock_in", recentStockIn);
+        stats.put("movement_trend", Map.of("in", inTrend, "out", outTrend));
+
+        // Category Cards (Requirement 1.4)
+        Map<ItemCategory, Double> categoryValue = new HashMap<>();
+        Map<ItemCategory, Long> categoryCount = new HashMap<>();
+        itemRepository.findAll().forEach(i -> {
+            if (i.getCategory() != null) {
+                categoryCount.put(i.getCategory(), categoryCount.getOrDefault(i.getCategory(), 0L) + 1);
+                double val = (i.getCurrentStock() != null ? i.getCurrentStock() : 0.0) 
+                           * (i.getAvgUnitCost() != null ? i.getAvgUnitCost().doubleValue() : 0.0);
+                categoryValue.put(i.getCategory(), categoryValue.getOrDefault(i.getCategory(), 0.0) + val);
+            }
+        });
+        
+        List<Map<String, Object>> categoryDistribution = new ArrayList<>();
+        for (ItemCategory cat : ItemCategory.values()) {
+            Map<String, Object> cMap = new HashMap<>();
+            cMap.put("category", cat.name());
+            cMap.put("count", categoryCount.getOrDefault(cat, 0L));
+            cMap.put("value", categoryValue.getOrDefault(cat, 0.0));
+            categoryDistribution.add(cMap);
+        }
+        stats.put("category_stats", categoryDistribution);
+
+        // Activity Timeline (Vertical feed)
+        List<Map<String, Object>> timeline = movementRepository.findAll().stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .limit(15)
+                .map(m -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("time", m.getCreatedAt());
+                    map.put("action", m.getMovementType());
+                    map.put("item", m.getItem().getItemName());
+                    map.put("qty", m.getQuantity());
+                    map.put("user", m.getCreatedBy() != null ? m.getCreatedBy().getFullName() : "System");
+                    return map;
+                })
+                .toList();
+        stats.put("activity_timeline", timeline);
+
+        return stats;
+    }
+
+    public List<InventoryItemResponse> getAllItems() {
+        return itemRepository.findAll().stream().map(this::mapToResponse).toList();
     }
 
     public List<InventoryItemResponse> getLowStockItems() {
         return itemRepository.findAll().stream()
-                .filter(item -> item.getMinimumStockLevel() != null &&
-                        batchRepository.getTotalStock(item.getId()) < item.getMinimumStockLevel())
-                .map(this::toItemResponse)
-                .collect(Collectors.toList());
-    }
-
-    public List<StockMovementResponse> getStockMovements() {
-        return movementRepository.findAll().stream()
-                .map(this::toMovementResponse)
-                .collect(Collectors.toList());
+                .filter(i -> i.getReorderPoint() != null && i.getCurrentStock() != null && i.getCurrentStock() <= i.getReorderPoint())
+                .map(this::mapToResponse).toList();
     }
 
     public List<StockBatch> getExpiringItems() {
-        LocalDate today = LocalDate.now();
-        LocalDate warningDate = today.plusDays(expiryWarningDays);
-        return batchRepository.findExpiringBatches(today, warningDate);
+        return batchRepository.findExpiringBatches(LocalDate.now(), LocalDate.now().plusDays(30));
     }
 
-    private void checkLowStockAlert(InventoryItem item) {
-        if (item.getMinimumStockLevel() != null) {
-            double current = batchRepository.getTotalStock(item.getId());
-            if (current < item.getMinimumStockLevel())
-                notificationService.createLowStockAlert(item.getItemName(), current, item.getUnit().name());
-        }
-    }
-
-    private void checkExpiryAlert(StockBatch batch, String itemName) {
-        if (batch.getExpiryDate() != null &&
-                batch.getExpiryDate().isBefore(LocalDate.now().plusDays(expiryWarningDays)))
-            notificationService.createExpiryAlert(itemName, batch.getExpiryDate().toString());
-    }
-
-    private void recordMovement(InventoryItem item, MovementType type, Double qty, String reason,
-                                 IssuedToType issuedToType, Long farmId, String dept, String refType, Long refId,
-                                 LocalDate movementDate) {
-        StockMovement m = new StockMovement();
-        m.setItem(item);
-        m.setMovementType(type);
-        m.setQuantity(qty);
-        m.setReason(reason);
-        m.setIssuedToType(issuedToType);
-        m.setFarmId(farmId);
-        m.setDepartment(dept);
-        m.setReferenceType(refType);
-        m.setReferenceId(refId);
-        m.setMovementDate(movementDate);
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        userRepository.findByEmail(email).ifPresent(m::setPerformedBy);
-        movementRepository.save(m);
-    }
-
-    private InventoryItem findItemById(Long id) {
-        return itemRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Inventory item not found: " + id));
-    }
-
-    public InventoryItemResponse toItemResponse(InventoryItem item) {
+    private InventoryItemResponse mapToResponse(InventoryItem item) {
         InventoryItemResponse r = new InventoryItemResponse();
         r.setId(item.getId());
         r.setItemName(item.getItemName());
+        // Map as "name" for the frontend
+        r.setName(item.getItemName());
+        r.setSku(item.getSku());
         r.setCategory(item.getCategory());
-        r.setUnit(item.getUnit());
-        r.setMinimumStockLevel(item.getMinimumStockLevel());
-        r.setExpiryRequired(item.isExpiryRequired());
-        r.setStatus(item.getStatus());
-        r.setCurrentStock(batchRepository.getTotalStock(item.getId()));
-        r.setCreatedAt(item.getCreatedAt());
-        r.setUpdatedAt(item.getUpdatedAt());
+        r.setCurrentStock(item.getCurrentStock());
+        r.setReorderPoint(item.getReorderPoint());
+        r.setUnit(item.getUnit() != null ? item.getUnit().name() : "");
         return r;
-    }
-
-    private StockMovementResponse toMovementResponse(StockMovement movement) {
-        StockMovementResponse response = new StockMovementResponse();
-        response.setId(movement.getId());
-        response.setItemId(movement.getItem().getId());
-        response.setItemName(movement.getItem().getItemName());
-        response.setMovementType(movement.getMovementType());
-        response.setQuantity(movement.getQuantity());
-        response.setReason(movement.getReason());
-        response.setIssuedToType(movement.getIssuedToType());
-        response.setFarmId(movement.getFarmId());
-        response.setDepartment(movement.getDepartment());
-        response.setReferenceType(movement.getReferenceType());
-        response.setReferenceId(movement.getReferenceId());
-        response.setPerformedByName(movement.getPerformedBy() != null ? movement.getPerformedBy().getFullName() : null);
-        response.setMovementDate(movement.getMovementDate());
-        response.setCreatedAt(movement.getCreatedAt());
-        return response;
     }
 }

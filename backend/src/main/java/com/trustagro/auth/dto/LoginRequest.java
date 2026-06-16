@@ -11,4 +11,7 @@ public class LoginRequest {
     private String email;
     @NotBlank @Size(min = 8, max = 72)
     private String password;
+
+    public String getEmail() { return email; }
+    public String getPassword() { return password; }
 }

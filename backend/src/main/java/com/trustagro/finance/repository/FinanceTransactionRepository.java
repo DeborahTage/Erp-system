@@ -19,4 +19,16 @@ public interface FinanceTransactionRepository extends JpaRepository<FinanceTrans
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinanceTransaction t WHERE t.transactionType = :type AND t.transactionDate BETWEEN :from AND :to")
     BigDecimal sumByTypeAndDateRange(@Param("type") TransactionType type, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    List<FinanceTransaction> findByBusinessUnit(com.trustagro.finance.entity.BusinessUnit businessUnit);
+    List<FinanceTransaction> findByAccountCode(com.trustagro.finance.entity.AccountCode accountCode);
+    
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinanceTransaction t WHERE t.businessUnit = :unit AND t.transactionType = :type")
+    BigDecimal sumByBusinessUnitAndType(@Param("unit") com.trustagro.finance.entity.BusinessUnit unit, @Param("type") TransactionType type);
+
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM FinanceTransaction t WHERE t.businessUnit = :unit AND t.transactionType = :type AND t.transactionDate BETWEEN :from AND :to")
+    BigDecimal sumByBusinessUnitAndTypeAndDateRange(@Param("unit") com.trustagro.finance.entity.BusinessUnit unit, @Param("type") TransactionType type, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    List<FinanceTransaction> findByInvoiceRef(String invoiceRef);
+    List<FinanceTransaction> findByFlockId(Long flockId);
 }

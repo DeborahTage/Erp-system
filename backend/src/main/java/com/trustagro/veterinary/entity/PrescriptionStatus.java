@@ -1,5 +1,12 @@
 package com.trustagro.veterinary.entity;
 
 public enum PrescriptionStatus {
-    PENDING, DISPENSED, PARTIALLY_DISPENSED, CANCELLED
+    DRAFT,
+    SUBMITTED,
+    PENDING_PHARMACY,
+    APPROVED,
+    DISPENSED,
+    COMPLETED,
+    REJECTED,
+    CANCELLED
 }

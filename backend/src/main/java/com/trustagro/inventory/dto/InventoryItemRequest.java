@@ -17,7 +17,11 @@ public class InventoryItemRequest {
     private ItemCategory category;
     @NotNull
     private ItemUnit unit;
+    private String sku;
     @PositiveOrZero
     private Double minimumStockLevel;
+    private Double reorderPoint;
+    private Double reorderQty;
+    private String storageLocation;
     private boolean expiryRequired;
 }

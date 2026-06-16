@@ -26,4 +26,16 @@ public class TransactionRequest {
     @Size(max = 300)
     private String description;
     private LocalDate transactionDate;
+
+    public TransactionType getTransactionType() { return transactionType; }
+    public String getCategory() { return category; }
+    public BigDecimal getAmount() { return amount; }
+    public PaymentMethod getPaymentMethod() { return paymentMethod; }
+    public String getDepartment() { return department; }
+    public Long getFarmId() { return farmId; }
+    public Long getClientId() { return clientId; }
+    public String getReferenceType() { return referenceType; }
+    public Long getReferenceId() { return referenceId; }
+    public String getDescription() { return description; }
+    public LocalDate getTransactionDate() { return transactionDate; }
 }

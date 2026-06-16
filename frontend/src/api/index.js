@@ -1,5 +1,7 @@
 import api from './axios';
 
+export { api };
+
 export const authApi = {
   login: (data) => api.post('/api/auth/login', data),
   me: () => api.get('/api/auth/me'),
@@ -19,6 +21,9 @@ export const farmApi = {
   create: (data) => api.post('/api/farms', data),
   update: (id, data) => api.put(`/api/farms/${id}`, data),
   updateStatus: (id, status) => api.patch(`/api/farms/${id}/status`, { status }),
+  getBiosecurityLogs: (id) => api.get(`/api/farms/${id}/biosecurity`),
+  logBiosecurity: (id, data) => api.post(`/api/farms/${id}/biosecurity`, data),
+  getBarns: () => api.get('/api/farms/barns'),
 };
 
 export const flockApi = {
@@ -27,6 +32,11 @@ export const flockApi = {
   create: (data) => api.post('/api/flocks', data),
   update: (id, data) => api.put(`/api/flocks/${id}`, data),
   close: (id) => api.patch(`/api/flocks/${id}/close`),
+  getGrowth: (id) => api.get(`/api/flocks/${id}/growth`),
+  addGrowth: (id, data) => api.post(`/api/flocks/${id}/growth`, data),
+  getEggProduction: (id) => api.get(`/api/flocks/${id}/eggs`),
+  addEggProduction: (id, data) => api.post(`/api/flocks/${id}/eggs`, data),
+  getFCR: (id) => api.get(`/api/flocks/${id}/fcr`),
 };
 
 export const dailyRecordApi = {
@@ -47,6 +57,23 @@ export const inventoryApi = {
   getLowStock: () => api.get('/api/inventory/low-stock'),
   getExpiryAlerts: () => api.get('/api/inventory/expiry-alerts'),
   getMovements: () => api.get('/api/inventory/movements'),
+  getValuationReport: () => api.get('/api/inventory/reports/valuation'),
+  getDashboardStats: () => api.get('/api/inventory/stats'),
+};
+
+export const requisitionApi = {
+  getAll: () => api.get('/api/inventory/requisitions'),
+  create: (data) => api.post('/api/inventory/requisitions', data),
+  approve: (id) => api.put(`/api/inventory/requisitions/${id}/approve`),
+  issue: (id) => api.put(`/api/inventory/requisitions/${id}/issue`),
+};
+
+export const supplierApi = {
+  getAll: () => api.get('/api/inventory/suppliers'),
+  getById: (id) => api.get(`/api/inventory/suppliers/${id}`),
+  create: (data) => api.post('/api/inventory/suppliers', data),
+  update: (id, data) => api.put(`/api/inventory/suppliers/${id}`, data),
+  delete: (id) => api.delete(`/api/inventory/suppliers/${id}`),
 };
 
 export const vetApi = {
@@ -61,25 +88,40 @@ export const vetApi = {
   updateDiseaseCase: (id, data) => api.put(`/api/vet/disease-cases/${id}`, data),
   getTreatments: () => api.get('/api/vet/treatments'),
   createTreatment: (data) => api.post('/api/vet/treatments', data),
-  getPrescriptions: () => api.get('/api/vet/prescriptions'),
-  createPrescription: (data) => api.post('/api/vet/prescriptions', data),
+  getPrescriptions: (data) => api.post('/api/vet/prescriptions', data),
   dispensePrescription: (id) => api.patch(`/api/vet/prescriptions/${id}/dispense`),
+  getDrugUsageReport: (params) => api.get('/api/vet/reports/drug-usage', { params }),
+  getFlockEMR: (flockId) => api.get(`/api/vet/flocks/${flockId}/emr`),
+  logObservation: (data) => api.post('/api/vet/observations', data),
+  createNecropsy: (data) => api.post('/api/vet/necropsies', data),
+  setWithdrawal: (flockId, days) => api.post(`/api/vet/flocks/${flockId}/withdrawal`, null, { params: { days } }),
 };
 
 export const pharmacyApi = {
+  getDashboard: () => api.get('/api/pharmacy/dashboard'),
   getCustomers: () => api.get('/api/pharmacy/customers'),
   createCustomer: (data) => api.post('/api/pharmacy/customers', data),
   getSales: () => api.get('/api/pharmacy/sales'),
   createSale: (data) => api.post('/api/pharmacy/sales', data),
+  getPrescriptions: (status) => api.get('/api/prescriptions/pending'), // Modified to match new backend
+  approvePrescription: (id) => api.post(`/api/prescriptions/${id}/approve`),
+  dispensePrescription: (id) => api.post(`/api/prescriptions/${id}/dispense`),
   getReceipt: (id) => api.get(`/api/pharmacy/sales/${id}/receipt`),
 };
 
 export const financeApi = {
-  getAll: () => api.get('/api/finance/transactions'),
-  create: (data) => api.post('/api/finance/transactions', data),
-  getIncome: () => api.get('/api/finance/income'),
-  getExpenses: () => api.get('/api/finance/expenses'),
-  getProfitLoss: (params) => api.get('/api/finance/profit-loss', { params }),
+  getDashboard: () => api.get('/api/finance/dashboard'),
+  getTransactions: () => api.get('/api/finance/transactions'),
+  getInvoices: () => api.get('/api/finance/invoices'),
+  createPOSInvoice: (data) => api.post('/api/finance/invoices/pos', data),
+  createServiceInvoice: (data) => api.post('/api/finance/invoices/service', data),
+  getOverdueInvoices: () => api.get('/api/finance/invoices/overdue'),
+  getWallets: () => api.get('/api/finance/wallets'),
+  depositWallet: (data) => api.post('/api/finance/wallets/deposit'),
+  getProfitLoss: (params) => api.get('/api/finance/reports/profit-loss', { params }),
+  getARAging: () => api.get('/api/finance/reports/ar-aging'),
+  getFlockCOGS: (id) => api.get(`/api/finance/reports/flock/${id}/cogs`),
+  reconcileCash: (data) => api.post('/api/finance/reconciliation', data),
 };
 
 export const crmApi = {
@@ -90,6 +132,7 @@ export const crmApi = {
   getVisits: (params) => api.get('/api/crm/farm-visits', { params }),
   createVisit: (data) => api.post('/api/crm/farm-visits', data),
   getFollowUps: () => api.get('/api/crm/follow-ups'),
+  getOrders: () => api.get('/api/crm/orders'),
 };
 
 export const notificationApi = {
@@ -104,4 +147,23 @@ export const dashboardApi = {
   vet: () => api.get('/api/dashboard/vet'),
   pharmacy: () => api.get('/api/dashboard/pharmacy'),
   finance: () => api.get('/api/dashboard/finance'),
+};
+
+export const masterDataApi = {
+  getByCategory: (category, activeOnly = true) => api.get('/api/master-data', { params: { category, activeOnly } }),
+  create: (data) => api.post('/api/master-data', data),
+  update: (id, data) => api.put(`/api/master-data/${id}`, data),
+  toggleStatus: (id) => api.patch(`/api/master-data/${id}/toggle`),
+  delete: (id) => api.delete(`/api/master-data/${id}`),
+};
+
+export const auditApi = {
+  getAll: (params) => api.get('/api/audit-logs', { params }),
+};
+
+export const feedApi = {
+  getRecipes: () => api.get('/api/feed/recipes'),
+  createRecipe: (data) => api.post('/api/feed/recipes', data),
+  getSilos: () => api.get('/api/feed/silos'),
+  logDelivery: (data) => api.post('/api/feed/deliveries', data),
 };

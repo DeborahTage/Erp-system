@@ -26,6 +26,14 @@ public class Flock {
 
     private String birdType;
 
+    private String breed;
+
+    private String sourceHatchery;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "barn_id")
+    private Barn barn;
+
     private Integer initialBirdCount;
 
     private Integer currentBirdCount;
@@ -34,12 +42,46 @@ public class Flock {
 
     private LocalDate expectedEndDate;
 
+    private LocalDate expectedHarvestDate;
+
     @Enumerated(EnumType.STRING)
     private FlockStatus status = FlockStatus.ACTIVE;
+
+    private java.time.LocalDate withdrawalHoldUntil;
+    private Boolean isUnderWithdrawal = false;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    public Long getId() { return id; }
+    public String getBatchCode() { return batchCode; }
+    public Integer getCurrentBirdCount() { return currentBirdCount; }
+    public void setCurrentBirdCount(Integer currentBirdCount) { this.currentBirdCount = currentBirdCount; }
+    public Integer getInitialBirdCount() { return initialBirdCount; }
+    public void setInitialBirdCount(Integer initialBirdCount) { this.initialBirdCount = initialBirdCount; }
+
+    public String getSourceHatchery() { return sourceHatchery; }
+    public String getBreed() { return breed; }
+    public LocalDate getStartDate() { return startDate; }
+    public Barn getBarn() { return barn; }
+    public void setFarm(Farm farm) { this.farm = farm; }
+    public void setBatchCode(String batchCode) { this.batchCode = batchCode; }
+    public void setBirdType(String birdType) { this.birdType = birdType; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    public void setStatus(FlockStatus status) { this.status = status; }
+    public Farm getFarm() { return farm; }
+    public String getBirdType() { return birdType; }
+    public void setExpectedEndDate(LocalDate expectedEndDate) { this.expectedEndDate = expectedEndDate; }
+    public LocalDate getExpectedEndDate() { return expectedEndDate; }
+    public FlockStatus getStatus() { return status; }
+    public LocalDate getWithdrawalHoldUntil() { return withdrawalHoldUntil; }
+    public void setWithdrawalHoldUntil(LocalDate date) { this.withdrawalHoldUntil = date; }
+    public Boolean getIsUnderWithdrawal() { return isUnderWithdrawal; }
+    public void setIsUnderWithdrawal(Boolean isUnderWithdrawal) { this.isUnderWithdrawal = isUnderWithdrawal; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
 }

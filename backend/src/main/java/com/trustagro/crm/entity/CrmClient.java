@@ -38,4 +38,25 @@ public class CrmClient {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    public Long getId() { return id; }
+    public String getClientName() { return clientName; }
+    public String getPhone() { return phone; }
+    public String getLocation() { return location; }
+    public String getFarmType() { return farmType; }
+    public String getFarmSize() { return farmSize; }
+    public Integer getNumberOfBirds() { return numberOfBirds; }
+    public ClientStatus getStatus() { return status; }
+    public User getAssignedExtensionWorker() { return assignedExtensionWorker; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public void setClientName(String clientName) { this.clientName = clientName; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public void setLocation(String location) { this.location = location; }
+    public void setFarmType(String farmType) { this.farmType = farmType; }
+    public void setFarmSize(String farmSize) { this.farmSize = farmSize; }
+    public void setNumberOfBirds(Integer numberOfBirds) { this.numberOfBirds = numberOfBirds; }
+    public void setStatus(ClientStatus status) { this.status = status; }
+    public void setAssignedExtensionWorker(User assignedExtensionWorker) { this.assignedExtensionWorker = assignedExtensionWorker; }
 }

@@ -6,6 +6,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -40,4 +41,32 @@ public class User {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    public Long getId() { return id; }
+    public Role getRole() { return role; }
+    public void setRole(Role role) { this.role = role; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+    public UserStatus getStatus() { return status; }
+    public void setStatus(UserStatus status) { this.status = status; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public List<Long> getFarmIds() { return farmIds; }
+    public void setFarmIds(List<Long> farmIds) { this.farmIds = farmIds; }
+
+    /**
+     * Farm IDs this user has access to. Empty list = access to all farms.
+     * Used for Farm Manager and Extension Worker roles.
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_farm_access", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "farm_id")
+    private List<Long> farmIds;
 }

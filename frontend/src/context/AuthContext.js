@@ -1,5 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../api';
+import { 
+  hasPermission as checkPermission, 
+  hasAnyPermission as checkAnyPermission, 
+  canAccessModule as checkModuleAccess, 
+  canPerformAction as checkActionPermission 
+} from '../lib/permissions';
 
 const AuthContext = createContext(null);
 
@@ -34,8 +40,38 @@ export const AuthProvider = ({ children }) => {
 
   const hasRole = (...roles) => user && roles.includes(user.role);
 
+  const hasPermission = (permission) => {
+    if (!user) return false;
+    return checkPermission(user.role, permission);
+  };
+
+  const hasAnyPermission = (permissions) => {
+    if (!user) return false;
+    return checkAnyPermission(user.role, permissions);
+  };
+
+  const canAccessModule = (module) => {
+    if (!user) return false;
+    return checkModuleAccess(user.role, module);
+  };
+
+  const canPerformAction = (action, module) => {
+    if (!user) return false;
+    return checkActionPermission(user.role, action, module);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      logout, 
+      hasRole,
+      hasPermission,
+      hasAnyPermission,
+      canAccessModule,
+      canPerformAction
+    }}>
       {children}
     </AuthContext.Provider>
   );

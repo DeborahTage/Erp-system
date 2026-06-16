@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Alert, Button, Card, Col, Form, Row } from 'react-bootstrap';
-import { toast } from 'react-toastify';
 import { farmApi, flockApi, vetApi } from '../../api';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Textarea } from '../../components/ui/textarea';
+import { toast } from 'react-toastify';
 import { useLanguage } from '../../context/LanguageContext';
+import { ArrowLeft, AlertCircle, Calendar, Users, Activity, MessageSquare, ShieldAlert, Zap, Info, CheckCircle2, Siren } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 const HealthIssueReportForm = () => {
   const navigate = useNavigate();
@@ -21,6 +28,7 @@ const HealthIssueReportForm = () => {
     numberAffected: '',
     remarks: '',
   });
+
   const [farms, setFarms] = useState([]);
   const [flocks, setFlocks] = useState([]);
   const [error, setError] = useState('');
@@ -42,6 +50,13 @@ const HealthIssueReportForm = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    if (!form.farmId || !form.flockId || !form.symptoms) {
+      setError('Incomplete alert data. Please specify the flock and observed symptoms.');
+      setLoading(false);
+      return;
+    }
+
     try {
       await vetApi.createHealthReport({
         ...form,
@@ -51,38 +66,215 @@ const HealthIssueReportForm = () => {
         mortalityObserved: form.mortalityObserved ? Number(form.mortalityObserved) : null,
         numberAffected: form.numberAffected ? Number(form.numberAffected) : null,
       });
-      toast.success(t('healthReportForm.success'));
+      toast.success('Critical health alert dispatched to the veterinary queue.');
       navigate('/veterinary');
     } catch (err) {
-      setError(err.response?.data?.message || t('healthReportForm.error'));
+      setError(err.response?.data?.message || 'Failed to transmit health alert.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h5 className="fw-bold mb-3">{t('healthReportForm.title')}</h5>
-      <Card className="border-0 shadow-sm" style={{ maxWidth: 760 }}>
-        <Card.Body className="p-4">
-          {error && <Alert variant="danger" className="py-2 small">{error}</Alert>}
-          <Form onSubmit={handleSubmit}>
-            <Row className="g-3">
-              <Col md={6}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.farm')}</Form.Label><Form.Select value={form.farmId} onChange={(e) => setForm((prev) => ({ ...prev, farmId: e.target.value, flockId: '' }))} required><option value="">{t('forms.selectFarm')}</option>{farms.map((farm) => <option key={farm.id} value={farm.id}>{farm.farmName}</option>)}</Form.Select></Form.Group></Col>
-              <Col md={6}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.flock')}</Form.Label><Form.Select value={form.flockId} onChange={(e) => setForm((prev) => ({ ...prev, flockId: e.target.value }))} required><option value="">{t('forms.selectFlock')}</option>{flocks.map((flock) => <option key={flock.id} value={flock.id}>{flock.batchCode}</option>)}</Form.Select></Form.Group></Col>
-              <Col md={4}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.reportDate')}</Form.Label><Form.Control type="date" value={form.reportDate} onChange={(e) => setForm((prev) => ({ ...prev, reportDate: e.target.value }))} /></Form.Group></Col>
-              <Col md={4}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.mortalityObserved')}</Form.Label><Form.Control type="number" min="0" value={form.mortalityObserved} onChange={(e) => setForm((prev) => ({ ...prev, mortalityObserved: e.target.value }))} /></Form.Group></Col>
-              <Col md={4}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.numberAffected')}</Form.Label><Form.Control type="number" min="0" value={form.numberAffected} onChange={(e) => setForm((prev) => ({ ...prev, numberAffected: e.target.value }))} /></Form.Group></Col>
-              <Col xs={12}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.symptoms')}</Form.Label><Form.Control as="textarea" rows={3} value={form.symptoms} onChange={(e) => setForm((prev) => ({ ...prev, symptoms: e.target.value }))} /></Form.Group></Col>
-              <Col xs={12}><Form.Group><Form.Label className="small fw-semibold">{t('healthReportForm.remarks')}</Form.Label><Form.Control as="textarea" rows={2} value={form.remarks} onChange={(e) => setForm((prev) => ({ ...prev, remarks: e.target.value }))} /></Form.Group></Col>
-            </Row>
-            <div className="d-flex gap-2 mt-4">
-              <Button type="submit" variant="danger" disabled={loading}>{loading ? t('healthReportForm.submitting') : t('healthReportForm.submit')}</Button>
-              <Button variant="outline-secondary" onClick={() => navigate(-1)}>{t('forms.cancel')}</Button>
+    <div className="space-y-10 max-w-5xl mx-auto pb-16 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-12 w-12 rounded-2xl bg-white shadow-sm border border-gray-100 hover:bg-gray-50 group transition-all"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-400 group-hover:text-gray-900 transition-colors" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-gray-900 flex items-center gap-3">
+              Fast-Track Alert
+              <div className="px-3 py-1 bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-widest rounded-full border border-amber-100 flex items-center gap-1.5">
+                <Zap className="h-3 w-3 animate-pulse" />
+                Priority Incident
+              </div>
+            </h1>
+            <p className="text-sm font-bold text-gray-400 mt-1 uppercase tracking-widest">Immediate field-to-clinic diagnostic relay</p>
+          </div>
+        </div>
+        <div className="h-px flex-1 bg-gray-100 hidden md:block mx-8" />
+        <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl border border-gray-100">
+          <Siren className="h-4 w-4 text-rose-500 animate-pulse" />
+          <span className="text-[10px] font-black uppercase text-gray-500 text-rose-600">Priority Link Active</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        <div className="lg:col-span-2 space-y-8">
+          <Card className="border-none shadow-2xl shadow-gray-200/40 rounded-[2.5rem] overflow-hidden bg-white">
+            <CardHeader className="bg-gray-50/50 border-b border-gray-100 p-8">
+              <CardTitle className="text-lg font-black text-gray-900 tracking-tight flex items-center gap-2 uppercase">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                Incident Matrix
+              </CardTitle>
+              <CardDescription className="text-xs font-bold text-gray-400">Specify biological agent and target population parameters</CardDescription>
+            </CardHeader>
+            <CardContent className="p-8">
+              <form onSubmit={handleSubmit} className="space-y-8">
+                {error && (
+                  <div className="p-4 text-xs font-black text-rose-700 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-2">
+                    <AlertCircle className="h-5 w-5" />
+                    {error}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Incident Source (Farm) *</Label>
+                    <Select value={String(form.farmId)} onValueChange={(v) => setForm((prev) => ({ ...prev, farmId: v, flockId: '' }))}>
+                      <SelectTrigger className="h-12 bg-white border-2 border-gray-100 rounded-2xl font-bold focus:ring-amber-600 transition-all">
+                        <SelectValue placeholder="Select origin farm" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-none shadow-2xl">
+                        {farms.map((f) => (
+                          <SelectItem key={f.id} value={String(f.id)} className="rounded-xl my-1 font-bold">{f.farmName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Impacted Batch (Flock) *</Label>
+                    <Select value={String(form.flockId)} onValueChange={(v) => setForm((prev) => ({ ...prev, flockId: v }))} disabled={!form.farmId}>
+                      <SelectTrigger className={cn("h-12 border-2 rounded-2xl font-bold transition-all", !form.farmId ? "bg-gray-50 border-gray-100" : "bg-white border-gray-100 focus:ring-amber-600")}>
+                        <SelectValue placeholder="Select target batch" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-none shadow-2xl">
+                        {flocks.map((f) => (
+                          <SelectItem key={f.id} value={String(f.id)} className="rounded-xl my-1 font-bold">{f.batchCode}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Observation Date</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                      <Input
+                        type="date"
+                        className="h-12 pl-12 bg-white border-2 border-gray-100 rounded-2xl font-bold focus:ring-amber-600 transition-all"
+                        value={form.reportDate}
+                        onChange={(e) => setForm((prev) => ({ ...prev, reportDate: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Mortality</Label>
+                      <div className="relative">
+                        <Activity className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-rose-500" />
+                        <Input
+                          type="number"
+                          min="0"
+                          className="h-12 pl-12 bg-rose-50/30 border-rose-100 border-2 rounded-2xl font-black text-rose-700 focus:ring-amber-600 transition-all"
+                          value={form.mortalityObserved}
+                          onChange={(e) => setForm((prev) => ({ ...prev, mortalityObserved: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Symptomatic</Label>
+                      <div className="relative">
+                        <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-amber-500" />
+                        <Input
+                          type="number"
+                          min="0"
+                          className="h-12 pl-12 bg-amber-50/30 border-amber-100 border-2 rounded-2xl font-black text-amber-700 focus:ring-amber-600 transition-all"
+                          value={form.numberAffected}
+                          onChange={(e) => setForm((prev) => ({ ...prev, numberAffected: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 md:col-span-2">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Observed Clinical Signs *</Label>
+                    <Textarea
+                      rows={4}
+                      className="bg-white border-2 border-gray-100 rounded-2xl font-medium text-sm focus:ring-amber-600 transition-all p-4 leading-relaxed"
+                      value={form.symptoms}
+                      onChange={(e) => setForm((prev) => ({ ...prev, symptoms: e.target.value }))}
+                      placeholder="Describe specific symptoms (e.g., respiratory distress, unusual gait, lethargy)..."
+                    />
+                  </div>
+
+                  <div className="space-y-3 md:col-span-2">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Supplemental Field Notes</Label>
+                    <Textarea
+                      rows={2}
+                      className="bg-white border-2 border-gray-100 rounded-2xl font-medium text-sm focus:ring-amber-600 transition-all p-4"
+                      value={form.remarks}
+                      onChange={(e) => setForm((prev) => ({ ...prev, remarks: e.target.value }))}
+                      placeholder="Contextual details (feed changes, weather events, vaccine status)..."
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-4 pt-8">
+                  <Button type="submit" className="flex-[2] h-14 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-95" disabled={loading}>
+                    {loading ? 'Dispatching...' : 'Broadcast Emergency Alert'}
+                  </Button>
+                  <Button type="button" variant="outline" className="flex-1 h-14 rounded-2xl border-2 font-black text-sm uppercase tracking-widest hover:bg-gray-50" onClick={() => navigate(-1)}>
+                    Discard
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-8">
+          <Card className="border-none shadow-2xl shadow-gray-200/40 rounded-[2.5rem] bg-indigo-900 text-white overflow-hidden p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-indigo-800 rounded-xl">
+                <Info className="h-5 w-5 text-indigo-300" />
+              </div>
+              <span className="text-xs font-black uppercase tracking-widest text-indigo-200">Submission Protocol</span>
             </div>
-          </Form>
-        </Card.Body>
-      </Card>
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <h4 className="text-sm font-black flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  Biosecurity Initializer
+                </h4>
+                <p className="text-xs text-indigo-200/70 font-medium leading-relaxed italic">
+                  Dispatched alerts are immediately visible to all veterinary officers. Use this only for genuine clinical concerns requiring audit.
+                </p>
+              </div>
+              <div className="h-px bg-indigo-800" />
+              <div className="space-y-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">Relay Status</p>
+                <div className="flex items-center gap-3 bg-indigo-950/30 p-3 rounded-xl border border-indigo-800/50">
+                  <div className="h-1.5 w-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                  <span className="text-[10px] font-bold">Encrypted Audit Link Active</span>
+                </div>
+                <div className="flex items-center gap-3 bg-indigo-950/30 p-3 rounded-xl border border-indigo-800/50">
+                  <div className="h-1.5 w-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                  <span className="text-[10px] font-bold">Vet Notification Queue Ready</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="border-none shadow-2xl shadow-gray-200/40 rounded-[2.5rem] bg-amber-500 p-8 text-white">
+            <div className="flex items-center gap-3 mb-4">
+              <ShieldAlert className="h-5 w-5 text-white" />
+              <span className="text-xs font-black uppercase tracking-widest">Surveillance Warning</span>
+            </div>
+            <p className="text-[11px] text-amber-50 font-medium leading-relaxed italic">
+              Multiple reports within a 5-mile radius will trigger an automatic biosecurity perimeter alert. Ensure accuracy of GPS/Farm coordinates.
+            </p>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

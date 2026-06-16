@@ -19,8 +19,9 @@ public class StockInRequest {
     private Double quantity;
     @PositiveOrZero
     private BigDecimal unitCost;
-    @Size(max = 120)
-    private String supplier;
+    private Long supplierId;
     private LocalDate expiryDate;
     private LocalDate dateReceived;
+    @Size(max = 60)
+    private String poReference;
 }

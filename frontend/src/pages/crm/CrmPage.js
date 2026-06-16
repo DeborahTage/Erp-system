@@ -1,14 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, Nav, Tab } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { crmApi } from '../../api';
-import DataTable from '../../components/common/DataTable';
-import StatusBadge from '../../components/common/StatusBadge';
+import DataTable from '../../components/shared/DataTable';
+import StatusBadge from '../../components/shared/StatusBadge';
+import PageHeader from '../../components/shared/PageHeader';
+import StatsCard from '../../components/shared/StatsCard';
 import { useLanguage } from '../../context/LanguageContext';
+import { useAuth } from '../../context/AuthContext';
 import { formatDate } from '../../utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Users, Calendar, Activity, Plus, Download, FileText, Building2, AlertTriangle } from 'lucide-react';
+import { PERMISSIONS } from '../../lib/permissions';
 
 const CrmPage = () => {
   const { t } = useLanguage();
+  const { hasPermission, canPerformAction } = useAuth();
   const [clients, setClients] = useState([]);
   const [visits, setVisits] = useState([]);
   const [followUps, setFollowUps] = useState([]);
@@ -25,24 +34,88 @@ const CrmPage = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  // Calculate analytics
+  const totalClients = clients.length;
+  const activeClients = clients.filter(c => c.status === 'ACTIVE').length;
+  const totalBirds = clients.reduce((sum, c) => sum + (Number(c.numberOfBirds) || 0), 0);
+  const upcomingFollowUps = followUps.filter(f => new Date(f.nextFollowUpDate) >= new Date()).length;
+
+  const kpiCards = [
+    {
+      title: 'Total Clients',
+      value: totalClients,
+      icon: Users,
+      iconColor: 'text-blue-600',
+      bgColor: 'bg-blue-50'
+    },
+    {
+      title: 'Active Clients',
+      value: activeClients,
+      icon: Activity,
+      iconColor: 'text-green-600',
+      bgColor: 'bg-green-50'
+    },
+    {
+      title: 'Total Birds',
+      value: totalBirds.toLocaleString(),
+      icon: Building2,
+      iconColor: 'text-purple-600',
+      bgColor: 'bg-purple-50'
+    },
+    {
+      title: 'Upcoming Follow-ups',
+      value: upcomingFollowUps,
+      icon: Calendar,
+      iconColor: 'text-orange-600',
+      bgColor: 'bg-orange-50'
+    }
+  ];
+
+  const actions = [
+    {
+      label: 'Add Client',
+      icon: Plus,
+      onClick: () => navigate('/crm/clients/new'),
+      show: hasPermission(PERMISSIONS.MANAGE_CLIENTS)
+    },
+    {
+      label: 'Record Visit',
+      icon: Activity,
+      onClick: () => navigate('/crm/visits/new'),
+      show: canPerformAction('create', 'farmVisits')
+    },
+    {
+      label: 'Export',
+      icon: Download,
+      onClick: () => console.log('Export CRM data'),
+      show: true
+    },
+    {
+      label: 'Generate Report',
+      icon: FileText,
+      onClick: () => console.log('Generate report'),
+      show: true
+    }
+  ].filter(a => a.show);
+
   const clientCols = [
     { key: 'clientName', label: t('crm.name') },
     { key: 'phone', label: t('crm.phone') },
     { key: 'location', label: t('crm.location') },
     { key: 'farmType', label: t('crm.farmType') },
-    { key: 'numberOfBirds', label: t('crm.birds') },
+    { key: 'numberOfBirds', label: t('crm.birds'), render: (row) => Number(row.numberOfBirds).toLocaleString() },
     { key: 'status', label: t('crm.status'), render: (row) => <StatusBadge status={row.status} /> },
     { key: 'assignedExtensionWorkerName', label: t('crm.extensionWorker') },
     {
       key: 'actions',
       label: '',
       render: (row) => (
-        <div className="d-flex gap-1">
-          <Button size="sm" variant="outline-primary" onClick={() => navigate(`/crm/clients/${row.id}/edit`)}>
-            {t('common.edit')}
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => navigate(`/crm/clients/${row.id}/edit`)}>
+            Edit
           </Button>
-          <Button size="sm" variant="outline-success" onClick={() => navigate('/crm/visits/new', { state: { clientId: row.id } })}>
-            {t('crm.visit')}
+          <Button size="sm" variant="outline" onClick={() => navigate('/crm/visits/new', { state: { clientId: row.id } })}>
+            Visit
           </Button>
         </div>
       )
@@ -58,37 +131,75 @@ const CrmPage = () => {
   ];
 
   return (
-    <div>
-      <h5 className="fw-bold mb-3">{t('crm.title')}</h5>
-      {followUps.length > 0 && (
-        <div className="alert alert-warning py-2 small mb-3">
-          <strong>{followUps.length}</strong> {t('crm.followupsDue', { count: followUps.length })}
-        </div>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title="CRM Management"
+        description="Manage client relationships, lead pipeline, and follow-up schedules."
+        actions={actions}
+      />
+
+      {/* KPI Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {kpiCards.map((card, index) => (
+          <StatsCard key={index} {...card} />
+        ))}
+      </div>
+
+      {/* Alert Banner */}
+      {upcomingFollowUps > 0 && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <div>
+                <p className="font-semibold text-orange-900">Follow-ups Due</p>
+                <p className="text-sm text-orange-700">{upcomingFollowUps} client follow-ups scheduled</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
-      <Tab.Container defaultActiveKey="clients">
-        <Nav variant="tabs" className="mb-3">
-          <Nav.Item><Nav.Link eventKey="clients">{t('crm.clients')} ({clients.length})</Nav.Link></Nav.Item>
-          <Nav.Item><Nav.Link eventKey="visits">{t('crm.farmVisits')} ({visits.length})</Nav.Link></Nav.Item>
-          <Nav.Item><Nav.Link eventKey="followups">{t('crm.followups')} <span className="badge bg-warning text-dark">{followUps.length}</span></Nav.Link></Nav.Item>
-        </Nav>
-        <Tab.Content>
-          <Tab.Pane eventKey="clients">
-            <div className="d-flex justify-content-end mb-2">
-              <Button size="sm" variant="success" onClick={() => navigate('/crm/clients/new')}>{t('crm.addClient')}</Button>
-            </div>
-            <Card className="border-0 shadow-sm"><Card.Body><DataTable columns={clientCols} data={clients} loading={loading} /></Card.Body></Card>
-          </Tab.Pane>
-          <Tab.Pane eventKey="visits">
-            <div className="d-flex justify-content-end mb-2">
-              <Button size="sm" variant="success" onClick={() => navigate('/crm/visits/new')}>{t('crm.recordVisit')}</Button>
-            </div>
-            <Card className="border-0 shadow-sm"><Card.Body><DataTable columns={visitCols} data={visits} loading={loading} /></Card.Body></Card>
-          </Tab.Pane>
-          <Tab.Pane eventKey="followups">
-            <Card className="border-0 shadow-sm"><Card.Body><DataTable columns={visitCols} data={followUps} loading={loading} /></Card.Body></Card>
-          </Tab.Pane>
-        </Tab.Content>
-      </Tab.Container>
+
+      {/* Main Content */}
+      <Card>
+        <CardHeader>
+          <CardTitle>CRM Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="clients" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="clients">
+                <Users className="mr-2 h-4 w-4" />
+                {t('crm.clients')}
+                <Badge variant="secondary" className="ml-2">{clients.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="visits">
+                <Activity className="mr-2 h-4 w-4" />
+                {t('crm.farmVisits')}
+                <Badge variant="secondary" className="ml-2">{visits.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="followups">
+                <Calendar className="mr-2 h-4 w-4" />
+                {t('crm.followups')}
+                <Badge variant="warning" className="ml-2">{followUps.length}</Badge>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="clients">
+              <DataTable columns={clientCols} data={clients} loading={loading} searchable pagination />
+            </TabsContent>
+
+            <TabsContent value="visits">
+              <DataTable columns={visitCols} data={visits} loading={loading} searchable pagination />
+            </TabsContent>
+
+            <TabsContent value="followups">
+              <DataTable columns={visitCols} data={followUps} loading={loading} searchable pagination />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 };

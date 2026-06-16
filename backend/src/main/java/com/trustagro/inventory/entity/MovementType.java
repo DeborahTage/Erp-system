@@ -1,5 +1,13 @@
 package com.trustagro.inventory.entity;
 
 public enum MovementType {
-    STOCK_IN, STOCK_OUT
+    RECEIPT,
+    ISSUE,
+    SALE,
+    TRANSFER,
+    ADJUSTMENT,
+    RETURN,
+    EXPIRED,
+    DAMAGED,
+    COUNT
 }

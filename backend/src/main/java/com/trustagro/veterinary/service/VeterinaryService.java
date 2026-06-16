@@ -1,5 +1,6 @@
 package com.trustagro.veterinary.service;
 
+import com.trustagro.audit.service.AuditService;
 import com.trustagro.common.exception.BusinessException;
 import com.trustagro.common.exception.ResourceNotFoundException;
 import com.trustagro.farm.entity.DailyFarmRecord;
@@ -8,6 +9,9 @@ import com.trustagro.farm.entity.Flock;
 import com.trustagro.farm.repository.DailyFarmRecordRepository;
 import com.trustagro.farm.repository.FarmRepository;
 import com.trustagro.farm.repository.FlockRepository;
+import com.trustagro.inventory.dto.StockOutRequest;
+import com.trustagro.inventory.entity.IssuedToType;
+import com.trustagro.inventory.service.InventoryService;
 import com.trustagro.notification.service.NotificationService;
 import com.trustagro.veterinary.dto.*;
 import com.trustagro.veterinary.entity.*;
@@ -17,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -26,16 +31,138 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class VeterinaryService {
 
+    private static final String MODULE = "VETERINARY";
+
     private final VaccinationScheduleRepository vaccinationRepo;
     private final DiseaseCaseRepository diseaseCaseRepo;
     private final TreatmentRecordRepository treatmentRepo;
     private final PrescriptionRepository prescriptionRepo;
     private final HealthIssueReportRepository healthIssueReportRepo;
+    private final NecropsyRecordRepository necropsyRepo;
+    private final FlockObservationRepository observationRepo;
+    private final VaccinationTemplateRepository vaccinationTemplateRepo;
     private final FarmRepository farmRepository;
     private final FlockRepository flockRepository;
     private final DailyFarmRecordRepository dailyFarmRecordRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final InventoryService inventoryService;
+    private final AuditService auditService;
+
+    // EMR Aggregation
+    public FlockEMRResponse getFlockEMR(Long flockId) {
+        Flock flock = flockRepository.findById(flockId)
+                .orElseThrow(() -> new ResourceNotFoundException("Flock not found"));
+        
+        FlockEMRResponse emr = new FlockEMRResponse();
+        emr.setFlockId(flock.getId());
+        emr.setBatchCode(flock.getBatchCode());
+        emr.setBreed(flock.getBreed());
+        
+        long age = java.time.temporal.ChronoUnit.DAYS.between(flock.getStartDate(), LocalDate.now());
+        emr.setAgeDays((int) age);
+        
+        emr.setDiseaseHistory(diseaseCaseRepo.findByFlock(flock).stream().map(this::toDiseaseCaseResponse).collect(Collectors.toList()));
+        emr.setTreatments(treatmentRepo.findByFlock(flock).stream().map(this::toTreatmentResponse).collect(Collectors.toList()));
+        emr.setVaccinations(vaccinationRepo.findByFlock(flock).stream().map(this::toVaccinationResponse).collect(Collectors.toList()));
+        emr.setNecropsies(necropsyRepo.findByFlockId(flockId).stream().map(this::toNecropsyResponse).collect(Collectors.toList()));
+        emr.setObservations(observationRepo.findByFlockId(flockId).stream().map(this::toObservationResponse).collect(Collectors.toList()));
+        
+        Integer totalMortality = dailyFarmRecordRepository.sumMortalityByFlock(flockId);
+        emr.setTotalMortality(totalMortality != null ? totalMortality : 0);
+        
+        if (flock.getInitialBirdCount() != null && flock.getInitialBirdCount() > 0) {
+            emr.setMortalityRate((emr.getTotalMortality() * 100.0) / flock.getInitialBirdCount());
+        }
+        
+        emr.setIsUnderWithdrawal(flock.getIsUnderWithdrawal());
+        emr.setWithdrawalEndDate(flock.getWithdrawalHoldUntil());
+        
+        return emr;
+    }
+
+    // Necropsy logic
+    public NecropsyResponse createNecropsy(NecropsyRequest req) {
+        NecropsyRecord nr = new NecropsyRecord();
+        nr.setFlock(flockRepository.findById(req.getFlockId()).orElseThrow());
+        nr.setNumBirdsExamined(req.getNumBirdsExamined());
+        nr.setHeartFindings(req.getHeartFindings());
+        nr.setLiverFindings(req.getLiverFindings());
+        nr.setSpleenFindings(req.getSpleenFindings());
+        nr.setLungFindings(req.getLungFindings());
+        nr.setGizzardFindings(req.getGizzardFindings());
+        nr.setIntestineFindings(req.getIntestineFindings());
+        nr.setGeneralFindings(req.getGeneralFindings());
+        nr.setSuspectedCauseOfDeath(req.getSuspectedCauseOfDeath());
+        nr.setFinalDiagnosis(req.getFinalDiagnosis());
+        nr.setRecommendations(req.getRecommendations());
+        nr.setPhotoUrls(req.getPhotoUrls());
+        
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        userRepository.findByEmail(email).ifPresent(nr::setPerformedBy);
+        
+        NecropsyRecord saved = necropsyRepo.save(nr);
+        return toNecropsyResponse(saved);
+    }
+
+    // Observation logic
+    public FlockObservationResponse logObservation(FlockObservationRequest req) {
+        FlockObservation obs = observationRepo.findByFlockIdAndObservationDate(req.getFlockId(), LocalDate.now())
+                .orElse(new FlockObservation());
+        
+        obs.setFlock(flockRepository.findById(req.getFlockId()).orElseThrow());
+        obs.setRespiratoryDistressScore(req.getRespiratoryDistressScore());
+        obs.setDiarrheaType(req.getDiarrheaType());
+        obs.setFeedIntakeDropPercentage(req.getFeedIntakeDropPercentage());
+        obs.setWaterIntakeDropPercentage(req.getWaterIntakeDropPercentage());
+        obs.setEggProductionDropPercentage(req.getEggProductionDropPercentage());
+        obs.setMortalityCount(req.getMortalityCount());
+        obs.setGeneralComments(req.getGeneralComments());
+        
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        userRepository.findByEmail(email).ifPresent(obs::setObservedBy);
+        
+        return toObservationResponse(observationRepo.save(obs));
+    }
+
+    // Withdrawal Enforcement
+    @Transactional
+    public void setFlockWithdrawal(Long flockId, Integer days) {
+        Flock flock = flockRepository.findById(flockId).orElseThrow();
+        flock.setIsUnderWithdrawal(true);
+        flock.setWithdrawalHoldUntil(LocalDate.now().plusDays(days));
+        flockRepository.save(flock);
+        
+        notificationService.createRoleNotification(
+            "FLOCK WITHDRAWAL LOCK",
+            "Flock " + flock.getBatchCode() + " is now under withdrawal lock until " + flock.getWithdrawalHoldUntil(),
+            com.trustagro.user.entity.Role.STORE_KEEPER
+        );
+    }
+
+    private NecropsyResponse toNecropsyResponse(NecropsyRecord nr) {
+        NecropsyResponse r = new NecropsyResponse();
+        r.setId(nr.getId());
+        r.setBatchCode(nr.getFlock().getBatchCode());
+        r.setNecropsyDate(nr.getNecropsyDate());
+        r.setSuspectedCauseOfDeath(nr.getSuspectedCauseOfDeath());
+        r.setFinalDiagnosis(nr.getFinalDiagnosis());
+        if (nr.getPerformedBy() != null) r.setPerformedBy(nr.getPerformedBy().getFullName());
+        r.setCreatedAt(nr.getCreatedAt());
+        return r;
+    }
+
+    private FlockObservationResponse toObservationResponse(FlockObservation obs) {
+        FlockObservationResponse r = new FlockObservationResponse();
+        r.setId(obs.getId());
+        r.setObservationDate(obs.getObservationDate());
+        r.setRespiratoryDistressScore(obs.getRespiratoryDistressScore());
+        r.setDiarrheaType(obs.getDiarrheaType());
+        r.setFeedIntakeDropPercentage(obs.getFeedIntakeDropPercentage());
+        r.setMortalityCount(obs.getMortalityCount());
+        r.setGeneralComments(obs.getGeneralComments());
+        return r;
+    }
 
     // Vaccinations
     public List<VaccinationResponse> getAllVaccinations() {
@@ -49,23 +176,36 @@ public class VeterinaryService {
         v.setVaccineName(req.getVaccineName());
         v.setDiseaseProtectedAgainst(req.getDiseaseProtectedAgainst());
         v.setScheduledDate(req.getScheduledDate());
+        v.setDosage(req.getDosage());
+        v.setRoute(req.getRoute());
+        v.setResponsiblePerson(req.getResponsiblePerson());
         v.setRemarks(req.getRemarks());
-        return toVaccinationResponse(vaccinationRepo.save(v));
+        VaccinationSchedule saved = vaccinationRepo.save(v);
+        auditService.logObject("CREATE", MODULE, "VACCINATION", saved.getId(), null, toVaccinationResponse(saved));
+        return toVaccinationResponse(saved);
     }
 
     public VaccinationResponse completeVaccination(Long id) {
         VaccinationSchedule v = vaccinationRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vaccination not found"));
+        VaccinationResponse before = toVaccinationResponse(v);
         v.setStatus(VaccinationStatus.COMPLETED);
         v.setActualDate(LocalDate.now());
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         userRepository.findByEmail(email).ifPresent(v::setGivenBy);
-        return toVaccinationResponse(vaccinationRepo.save(v));
+        VaccinationSchedule saved = vaccinationRepo.save(v);
+        auditService.logObject("COMPLETE", MODULE, "VACCINATION", saved.getId(), before, toVaccinationResponse(saved));
+        return toVaccinationResponse(saved);
     }
 
     // Disease Cases
     public List<DiseaseCaseResponse> getAllDiseaseCases() {
         return diseaseCaseRepo.findAll().stream().map(this::toDiseaseCaseResponse).collect(Collectors.toList());
+    }
+
+    public List<DiseaseCaseResponse> getActiveDiseaseCases() {
+        return diseaseCaseRepo.findByStatusOrderByDateDetectedDesc(DiseaseStatus.ACTIVE)
+                .stream().map(this::toDiseaseCaseResponse).collect(Collectors.toList());
     }
 
     public DiseaseCaseResponse createDiseaseCase(DiseaseCaseRequest req) {
@@ -78,20 +218,39 @@ public class VeterinaryService {
         dc.setNumberAffected(req.getNumberAffected());
         dc.setNumberDead(req.getNumberDead());
         dc.setSeverity(req.getSeverity());
+        dc.setActionTaken(req.getActionTaken());
+        if (req.getAttachmentUrl() != null) {
+            dc.setAttachmentPath(req.getAttachmentUrl());
+        }
+        if (req.getStatus() != null) {
+            dc.setStatus(req.getStatus());
+        }
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         userRepository.findByEmail(email).ifPresent(dc::setReportedBy);
-        return toDiseaseCaseResponse(diseaseCaseRepo.save(dc));
+        DiseaseCase saved = diseaseCaseRepo.save(dc);
+        auditService.logObject("CREATE", MODULE, "DISEASE_CASE", saved.getId(), null, toDiseaseCaseResponse(saved));
+        return toDiseaseCaseResponse(saved);
     }
 
     public DiseaseCaseResponse updateDiseaseCase(Long id, DiseaseCaseRequest req) {
         DiseaseCase dc = diseaseCaseRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Disease case not found"));
+        DiseaseCaseResponse before = toDiseaseCaseResponse(dc);
         dc.setSymptoms(req.getSymptoms());
         dc.setSuspectedDisease(req.getSuspectedDisease());
         dc.setNumberAffected(req.getNumberAffected());
         dc.setNumberDead(req.getNumberDead());
         dc.setSeverity(req.getSeverity());
-        return toDiseaseCaseResponse(diseaseCaseRepo.save(dc));
+        dc.setActionTaken(req.getActionTaken());
+        if (req.getAttachmentUrl() != null) {
+            dc.setAttachmentPath(req.getAttachmentUrl());
+        }
+        if (req.getStatus() != null) {
+            dc.setStatus(req.getStatus());
+        }
+        DiseaseCase saved = diseaseCaseRepo.save(dc);
+        auditService.logObject("UPDATE", MODULE, "DISEASE_CASE", saved.getId(), before, toDiseaseCaseResponse(saved));
+        return toDiseaseCaseResponse(saved);
     }
 
     // Health Issue Reports
@@ -128,6 +287,7 @@ public class VeterinaryService {
         userRepository.findByEmail(email).ifPresent(report::setReportedBy);
 
         HealthIssueReport saved = healthIssueReportRepo.save(report);
+        auditService.logObject("CREATE", MODULE, "HEALTH_REPORT", saved.getId(), null, toHealthIssueReportResponse(saved));
         notificationService.createRoleNotification(
                 "New Health Issue Report",
                 farm.getFarmName() + " / " + flock.getBatchCode() + " requires veterinary review.",
@@ -139,6 +299,8 @@ public class VeterinaryService {
     public HealthIssueReportResponse reviewHealthIssueReport(Long id, HealthIssueReportReviewRequest req) {
         HealthIssueReport report = healthIssueReportRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Health issue report not found"));
+        HealthIssueReportResponse before = toHealthIssueReportResponse(report);
+        
         report.setSuspectedDiagnosis(req.getSuspectedDiagnosis());
         report.setSeverity(req.getSeverity());
         report.setTreatmentPlan(req.getTreatmentPlan());
@@ -152,7 +314,9 @@ public class VeterinaryService {
 
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         userRepository.findByEmail(email).ifPresent(report::setReviewedBy);
-        return toHealthIssueReportResponse(healthIssueReportRepo.save(report));
+        HealthIssueReport saved = healthIssueReportRepo.save(report);
+        auditService.logObject("REVIEW", MODULE, "HEALTH_REPORT", saved.getId(), before, toHealthIssueReportResponse(saved));
+        return toHealthIssueReportResponse(saved);
     }
 
     // Treatments
@@ -160,22 +324,42 @@ public class VeterinaryService {
         return treatmentRepo.findAll().stream().map(this::toTreatmentResponse).collect(Collectors.toList());
     }
 
+    @Transactional
     public TreatmentResponse createTreatment(TreatmentRequest req) {
         TreatmentRecord t = new TreatmentRecord();
-        if (req.getDiseaseCaseId() != null)
-            t.setDiseaseCase(diseaseCaseRepo.findById(req.getDiseaseCaseId()).orElse(null));
+        if (req.getDiseaseCaseId() != null) {
+            t.setDiseaseCase(diseaseCaseRepo.findById(req.getDiseaseCaseId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Disease case not found")));
+        }
         t.setFarm(farmRepository.findById(req.getFarmId()).orElseThrow(() -> new ResourceNotFoundException("Farm not found")));
         t.setFlock(flockRepository.findById(req.getFlockId()).orElseThrow(() -> new ResourceNotFoundException("Flock not found")));
+        t.setInventoryItemId(req.getInventoryItemId());
+        t.setQuantity(req.getQuantity());
         t.setDrugName(req.getDrugName());
         t.setDosage(req.getDosage());
         t.setRoute(req.getRoute());
         t.setDuration(req.getDuration());
-        t.setStartDate(req.getStartDate());
+        t.setStartDate(req.getStartDate() != null ? req.getStartDate() : LocalDate.now());
         t.setEndDate(req.getEndDate());
         t.setOutcome(req.getOutcome());
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         userRepository.findByEmail(email).ifPresent(t::setVetOfficer);
-        return toTreatmentResponse(treatmentRepo.save(t));
+        TreatmentRecord saved = treatmentRepo.save(t);
+        deductStockIfApplicable(
+                req.getInventoryItemId(),
+                req.getQuantity(),
+                req.getFarmId(),
+                "TREATMENT",
+                saved.getId(),
+                "Treatment - " + req.getDrugName()
+        );
+        auditService.logObject("CREATE", MODULE, "TREATMENT", saved.getId(), null, toTreatmentResponse(saved));
+        return toTreatmentResponse(saved);
+    }
+
+    public List<TreatmentResponse> getRecentTreatments(int count) {
+        return treatmentRepo.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                .stream().limit(count).map(this::toTreatmentResponse).collect(Collectors.toList());
     }
 
     // Prescriptions
@@ -197,9 +381,16 @@ public class VeterinaryService {
         p.setDrugName(req.getDrugName());
         p.setQuantity(req.getQuantity());
         p.setDosageInstruction(req.getDosageInstruction());
+        p.setWithdrawalPeriodDays(req.getWithdrawalPeriodDays());
+        
+        if (req.getWithdrawalPeriodDays() != null && req.getWithdrawalPeriodDays() > 0) {
+            p.setWithdrawalEndDate(LocalDate.now().plusDays(req.getWithdrawalPeriodDays()));
+        }
+
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         userRepository.findByEmail(email).ifPresent(p::setCreatedByVet);
         Prescription saved = prescriptionRepo.save(p);
+        auditService.logObject("CREATE", MODULE, "PRESCRIPTION", saved.getId(), null, toPrescriptionResponse(saved));
         notificationService.createRoleNotification(
                 "Prescription Ready for Dispensing",
                 req.getPrescriptionNumber() + " has been sent to pharmacy.",
@@ -208,16 +399,62 @@ public class VeterinaryService {
         return toPrescriptionResponse(saved);
     }
 
+    @Transactional
     public PrescriptionResponse dispensePrescription(Long id) {
         Prescription p = prescriptionRepo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Prescription not found"));
         if (p.getStatus() == PrescriptionStatus.CANCELLED)
             throw new BusinessException("Prescription is cancelled");
+        if (p.getStatus() == PrescriptionStatus.DISPENSED)
+            throw new BusinessException("Prescription already dispensed");
+        String before = summarizePrescription(p);
+        deductStockIfApplicable(
+                p.getInventoryItemId(),
+                p.getQuantity(),
+                p.getFarmId(),
+                "PRESCRIPTION",
+                p.getId(),
+                "Prescription Dispense - " + p.getPrescriptionNumber()
+        );
         p.setStatus(PrescriptionStatus.DISPENSED);
-        return toPrescriptionResponse(prescriptionRepo.save(p));
+        Prescription saved = prescriptionRepo.save(p);
+        auditService.logObject("DISPENSE", MODULE, "PRESCRIPTION", saved.getId(), before, toPrescriptionResponse(saved));
+        return toPrescriptionResponse(saved);
     }
 
-    private VaccinationResponse toVaccinationResponse(VaccinationSchedule v) {
+    private void deductStockIfApplicable(Long inventoryItemId, Double quantity, Long farmId,
+                                         String referenceType, Long referenceId, String reason) {
+        if (inventoryItemId == null || quantity == null || quantity <= 0) {
+            return;
+        }
+        StockOutRequest stockOut = new StockOutRequest();
+        stockOut.setItemId(inventoryItemId);
+        stockOut.setQuantity(quantity);
+        stockOut.setReason(reason);
+        stockOut.setIssuedToType(IssuedToType.FARM);
+        stockOut.setFarmId(farmId);
+        stockOut.setReferenceType(referenceType);
+        stockOut.setReferenceId(referenceId);
+        inventoryService.stockOut(stockOut);
+    }
+
+    private String summarizeVaccination(VaccinationSchedule v) {
+        return v.getVaccineName() + " | " + v.getStatus() + " | scheduled=" + v.getScheduledDate();
+    }
+
+    private String summarizeDiseaseCase(DiseaseCase dc) {
+        return dc.getSuspectedDisease() + " | " + dc.getStatus() + " | affected=" + dc.getNumberAffected();
+    }
+
+    private String summarizeTreatment(TreatmentRecord t) {
+        return t.getDrugName() + " | qty=" + t.getQuantity() + " | outcome=" + t.getOutcome();
+    }
+
+    private String summarizePrescription(Prescription p) {
+        return p.getPrescriptionNumber() + " | " + p.getDrugName() + " | qty=" + p.getQuantity() + " | " + p.getStatus();
+    }
+
+    public VaccinationResponse toVaccinationResponse(VaccinationSchedule v) {
         VaccinationResponse r = new VaccinationResponse();
         r.setId(v.getId());
         if (v.getFarm() != null) { r.setFarmId(v.getFarm().getId()); r.setFarmName(v.getFarm().getFarmName()); }
@@ -226,6 +463,9 @@ public class VeterinaryService {
         r.setDiseaseProtectedAgainst(v.getDiseaseProtectedAgainst());
         r.setScheduledDate(v.getScheduledDate());
         r.setActualDate(v.getActualDate());
+        r.setDosage(v.getDosage());
+        r.setRoute(v.getRoute());
+        r.setResponsiblePerson(v.getResponsiblePerson());
         r.setStatus(v.getStatus());
         if (v.getGivenBy() != null) r.setGivenBy(v.getGivenBy().getFullName());
         r.setRemarks(v.getRemarks());
@@ -233,7 +473,7 @@ public class VeterinaryService {
         return r;
     }
 
-    private DiseaseCaseResponse toDiseaseCaseResponse(DiseaseCase dc) {
+    public DiseaseCaseResponse toDiseaseCaseResponse(DiseaseCase dc) {
         DiseaseCaseResponse r = new DiseaseCaseResponse();
         r.setId(dc.getId());
         if (dc.getFarm() != null) { r.setFarmId(dc.getFarm().getId()); r.setFarmName(dc.getFarm().getFarmName()); }
@@ -242,27 +482,47 @@ public class VeterinaryService {
         r.setSymptoms(dc.getSymptoms());
         r.setSuspectedDisease(dc.getSuspectedDisease());
         r.setNumberAffected(dc.getNumberAffected());
-        r.setNumberDead(dc.getNumberDead());
+        if (dc.getFlock() != null && dc.getDateDetected() != null) {
+            LocalDate end = dc.getDateResolved() != null ? dc.getDateResolved() : LocalDate.now();
+            Integer deaths = dailyFarmRecordRepository.sumMortalityBetweenAndFlock(dc.getDateDetected(), end, dc.getFlock().getId());
+            if (deaths != null && deaths > 0) {
+                dc.setNumberDead(deaths);
+                diseaseCaseRepo.save(dc); // Persist updated count
+                r.setNumberDead(deaths);
+            } else {
+                r.setNumberDead(dc.getNumberDead());
+            }
+        } else {
+            r.setNumberDead(dc.getNumberDead());
+        }
+        
         r.setSeverity(dc.getSeverity());
         r.setStatus(dc.getStatus());
+        r.setActionTaken(dc.getActionTaken());
+        r.setAttachmentUrl(dc.getAttachmentPath());
         if (dc.getReportedBy() != null) r.setReportedBy(dc.getReportedBy().getFullName());
         r.setCreatedAt(dc.getCreatedAt());
         return r;
     }
 
-    private TreatmentResponse toTreatmentResponse(TreatmentRecord t) {
+    public TreatmentResponse toTreatmentResponse(TreatmentRecord t) {
         TreatmentResponse r = new TreatmentResponse();
         r.setId(t.getId());
         if (t.getDiseaseCase() != null) r.setDiseaseCaseId(t.getDiseaseCase().getId());
         if (t.getFarm() != null) { r.setFarmId(t.getFarm().getId()); r.setFarmName(t.getFarm().getFarmName()); }
         if (t.getFlock() != null) { r.setFlockId(t.getFlock().getId()); r.setBatchCode(t.getFlock().getBatchCode()); }
+        r.setInventoryItemId(t.getInventoryItemId());
+        r.setQuantity(t.getQuantity());
         r.setDrugName(t.getDrugName());
         r.setDosage(t.getDosage());
         r.setRoute(t.getRoute());
         r.setDuration(t.getDuration());
         r.setStartDate(t.getStartDate());
         r.setEndDate(t.getEndDate());
-        if (t.getVetOfficer() != null) r.setVetOfficer(t.getVetOfficer().getFullName());
+        if (t.getVetOfficer() != null) {
+            r.setVetId(t.getVetOfficer().getId());
+            r.setVetOfficer(t.getVetOfficer().getFullName());
+        }
         r.setOutcome(t.getOutcome());
         r.setCreatedAt(t.getCreatedAt());
         return r;
@@ -287,7 +547,12 @@ public class VeterinaryService {
         r.setDrugName(p.getDrugName());
         r.setQuantity(p.getQuantity());
         r.setDosageInstruction(p.getDosageInstruction());
-        if (p.getCreatedByVet() != null) r.setCreatedByVet(p.getCreatedByVet().getFullName());
+        r.setWithdrawalPeriodDays(p.getWithdrawalPeriodDays());
+        r.setWithdrawalEndDate(p.getWithdrawalEndDate());
+        if (p.getCreatedByVet() != null) {
+            r.setPrescribedById(p.getCreatedByVet().getId());
+            r.setCreatedByVet(p.getCreatedByVet().getFullName());
+        }
         r.setStatus(p.getStatus());
         r.setCreatedAt(p.getCreatedAt());
         return r;

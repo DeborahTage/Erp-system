@@ -1,19 +1,48 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Spinner } from 'react-bootstrap';
+import LoadingState from '../shared/LoadingState';
 
-const ProtectedRoute = ({ children, roles }) => {
-  const { user, loading } = useAuth();
+/**
+ * Route guard supporting role, module, permission, or action-based access.
+ *
+ * @param {string[]} [roles] - Legacy role allow-list
+ * @param {string} [module] - Module key for canAccessModule()
+ * @param {string} [permission] - Single permission string
+ * @param {string[]} [permissions] - Any-of permission list
+ * @param {string} [action] - create | edit | delete | stockIn | stockOut
+ * @param {string} [resource] - Resource key for canPerformAction()
+ */
+const ProtectedRoute = ({ children, roles, module, permission, permissions, action, resource }) => {
+  const { user, loading, canAccessModule, hasPermission, hasAnyPermission, canPerformAction } = useAuth();
 
-  if (loading) return (
-    <div className="d-flex justify-content-center align-items-center vh-100">
-      <Spinner animation="border" variant="success" />
-    </div>
-  );
+  if (loading) {
+    return <LoadingState message="Loading..." />;
+  }
 
-  if (!user) return <Navigate to="/login" replace />;
-  if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (module && !canAccessModule(module)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (permission && !hasPermission(permission)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (permissions && permissions.length > 0 && !hasAnyPermission(permissions)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (action && resource && !canPerformAction(action, resource)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return children;
 };

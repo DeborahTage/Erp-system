@@ -9,9 +9,14 @@ import com.trustagro.farm.entity.Flock;
 import com.trustagro.farm.entity.FlockStatus;
 import com.trustagro.farm.repository.FarmRepository;
 import com.trustagro.farm.repository.FlockRepository;
+import com.trustagro.veterinary.entity.VaccinationSchedule;
+import com.trustagro.veterinary.entity.VaccinationStatus;
+import com.trustagro.veterinary.repository.PrescriptionRepository;
+import com.trustagro.veterinary.repository.VaccinationScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,6 +26,9 @@ public class FlockService {
 
     private final FlockRepository flockRepository;
     private final FarmRepository farmRepository;
+    private final VaccinationScheduleRepository vaccinationScheduleRepository;
+    private final PrescriptionRepository prescriptionRepository;
+    private final com.trustagro.veterinary.service.VaccinationAutomationService vaccinationAutomationService;
 
     public List<FlockResponse> getAll() {
         return flockRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());
@@ -41,7 +49,13 @@ public class FlockService {
         flock.setCurrentBirdCount(req.getInitialBirdCount());
         flock.setStartDate(req.getStartDate());
         flock.setExpectedEndDate(req.getExpectedEndDate());
-        return toResponse(flockRepository.save(flock));
+        flock.setBreed(req.getBreed());
+        Flock savedFlock = flockRepository.save(flock);
+        
+        // Automated Scheduling
+        vaccinationAutomationService.generateScheduleForFlock(savedFlock);
+        
+        return toResponse(savedFlock);
     }
 
     public FlockResponse update(Long id, FlockRequest req) {
@@ -53,6 +67,9 @@ public class FlockService {
 
     public FlockResponse close(Long id) {
         Flock flock = findById(id);
+        if (prescriptionRepository.existsByFlockIdAndWithdrawalEndDateAfter(id, LocalDate.now().minusDays(1))) {
+            throw new BusinessException("Cannot close/harvest flock: Active drug withdrawal period.");
+        }
         flock.setStatus(FlockStatus.CLOSED);
         return toResponse(flockRepository.save(flock));
     }

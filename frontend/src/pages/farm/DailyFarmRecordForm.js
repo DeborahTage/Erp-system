@@ -10,7 +10,7 @@ const DailyFarmRecordForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
-  const [form, setForm] = useState({ date: '', farmId: '', flockId: '', openingBirdCount: '', mortality: 0, culledBirds: 0, feedConsumed: '', waterConsumed: '', averageWeight: '', eggProduction: 0, damagedEggs: 0, symptomsOrRemarks: '' });
+  const [form, setForm] = useState({ date: '', farmId: '', flockId: '', openingBirdCount: '', mortality: 0, culledBirds: 0, feedConsumed: '', waterConsumed: '', averageWeight: '', eggProduction: 0, damagedEggs: 0, symptomsOrRemarks: '', mortalityCause: '', mortalityNotes: '' });
   const [farms, setFarms] = useState([]);
   const [flocks, setFlocks] = useState([]);
   const [error, setError] = useState('');
@@ -21,11 +21,12 @@ const DailyFarmRecordForm = () => {
     if (isEdit) {
       dailyRecordApi.getById(id).then(r => {
         const d = r.data.data;
-        setForm({ date: d.date, farmId: d.farmId, flockId: d.flockId, openingBirdCount: d.openingBirdCount || '', mortality: d.mortality || 0, culledBirds: d.culledBirds || 0, feedConsumed: d.feedConsumed || '', waterConsumed: d.waterConsumed || '', averageWeight: d.averageWeight || '', eggProduction: d.eggProduction || 0, damagedEggs: d.damagedEggs || 0, symptomsOrRemarks: d.symptomsOrRemarks || '' });
+        setForm({ date: d.date, farmId: d.farmId, flockId: d.flockId, openingBirdCount: d.openingBirdCount || '', mortality: d.mortality || 0, culledBirds: d.culledBirds || 0, feedConsumed: d.feedConsumed || '', waterConsumed: d.waterConsumed || '', averageWeight: d.averageWeight || '', eggProduction: d.eggProduction || 0, damagedEggs: d.damagedEggs || 0, symptomsOrRemarks: d.symptomsOrRemarks || '', mortalityCause: d.mortalityCause || '', mortalityNotes: d.mortalityNotes || '' });
         flockApi.getAll().then(fr => setFlocks(fr.data.data?.filter(f => f.farmId === d.farmId) || []));
       });
     }
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isEdit]);
 
   const handleFarmChange = (farmId) => {
     setForm(f => ({ ...f, farmId, flockId: '' }));
@@ -36,7 +37,7 @@ const DailyFarmRecordForm = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const payload = { ...form, farmId: Number(form.farmId), flockId: Number(form.flockId), openingBirdCount: Number(form.openingBirdCount), mortality: Number(form.mortality), culledBirds: Number(form.culledBirds), feedConsumed: Number(form.feedConsumed), waterConsumed: Number(form.waterConsumed), averageWeight: form.averageWeight ? Number(form.averageWeight) : null, eggProduction: Number(form.eggProduction), damagedEggs: Number(form.damagedEggs) };
+      const payload = { ...form, farmId: Number(form.farmId), flockId: Number(form.flockId), openingBirdCount: Number(form.openingBirdCount), mortality: Number(form.mortality), culledBirds: Number(form.culledBirds), feedConsumed: Number(form.feedConsumed), waterConsumed: Number(form.waterConsumed), averageWeight: form.averageWeight ? Number(form.averageWeight) : null, eggProduction: Number(form.eggProduction), damagedEggs: Number(form.damagedEggs), mortalityCause: form.mortalityCause || null };
       if (isEdit) await dailyRecordApi.update(id, payload);
       else await dailyRecordApi.create(payload);
       toast.success(t('dailyRecordForm.success'));
@@ -68,6 +69,29 @@ const DailyFarmRecordForm = () => {
               <Col xs={6} sm={3}><Form.Group><Form.Label className="small fw-semibold">{t('dailyRecordForm.eggProduction')}</Form.Label><Form.Control type="number" min="0" value={form.eggProduction} onChange={e => setForm({ ...form, eggProduction: e.target.value })} /></Form.Group></Col>
               <Col xs={6} sm={3}><Form.Group><Form.Label className="small fw-semibold">{t('dailyRecordForm.damagedEggs')}</Form.Label><Form.Control type="number" min="0" value={form.damagedEggs} onChange={e => setForm({ ...form, damagedEggs: e.target.value })} /></Form.Group></Col>
               <Col xs={12}><Form.Group><Form.Label className="small fw-semibold">{t('dailyRecordForm.symptoms')}</Form.Label><Form.Control as="textarea" rows={2} value={form.symptomsOrRemarks} onChange={e => setForm({ ...form, symptomsOrRemarks: e.target.value })} /></Form.Group></Col>
+              {Number(form.mortality) > 0 && (
+                <>
+                  <Col xs={12} sm={6}>
+                    <Form.Group>
+                      <Form.Label className="small fw-semibold text-danger">Mortality Cause</Form.Label>
+                      <Form.Select value={form.mortalityCause} onChange={e => setForm({ ...form, mortalityCause: e.target.value })}>
+                        <option value="">Select Cause</option>
+                        <option value="DISEASE">DISEASE</option>
+                        <option value="PREDATOR">PREDATOR</option>
+                        <option value="HEAT">HEAT</option>
+                        <option value="CULLING">CULLING</option>
+                        <option value="UNKNOWN">UNKNOWN</option>
+                      </Form.Select>
+                    </Form.Group>
+                  </Col>
+                  <Col xs={12} sm={6}>
+                    <Form.Group>
+                      <Form.Label className="small fw-semibold">Mortality Notes</Form.Label>
+                      <Form.Control type="text" placeholder="Detailed reason..." value={form.mortalityNotes} onChange={e => setForm({ ...form, mortalityNotes: e.target.value })} />
+                    </Form.Group>
+                  </Col>
+                </>
+              )}
             </Row>
             <div className="d-flex gap-2 mt-4">
               <Button type="submit" variant="success" disabled={loading}>{loading ? t('forms.saving') : t('forms.save')}</Button>

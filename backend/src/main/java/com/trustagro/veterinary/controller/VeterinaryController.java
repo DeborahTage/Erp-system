@@ -3,13 +3,17 @@ package com.trustagro.veterinary.controller;
 import com.trustagro.common.response.ApiResponse;
 import com.trustagro.veterinary.dto.*;
 import com.trustagro.veterinary.service.VeterinaryService;
+import com.trustagro.veterinary.service.VeterinaryDashboardService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/vet")
@@ -17,6 +21,13 @@ import java.util.List;
 public class VeterinaryController {
 
     private final VeterinaryService vetService;
+    private final VeterinaryDashboardService dashboardService;
+    private final com.trustagro.veterinary.service.VeterinaryReportService reportService;
+
+    @GetMapping("/dashboard-stats")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDashboardStats() {
+        return ResponseEntity.ok(ApiResponse.success(dashboardService.getDashboardData()));
+    }
 
     @GetMapping("/vaccinations")
     public ResponseEntity<ApiResponse<List<VaccinationResponse>>> getVaccinations() {
@@ -35,9 +46,34 @@ public class VeterinaryController {
         return ResponseEntity.ok(ApiResponse.success("Vaccination completed", vetService.completeVaccination(id)));
     }
 
+    @GetMapping("/flocks/{flockId}/emr")
+    public FlockEMRResponse getFlockEMR(@PathVariable Long flockId) {
+        return vetService.getFlockEMR(flockId);
+    }
+
+    @PostMapping("/observations")
+    public FlockObservationResponse logObservation(@RequestBody FlockObservationRequest req) {
+        return vetService.logObservation(req);
+    }
+
+    @PostMapping("/necropsies")
+    public NecropsyResponse createNecropsy(@RequestBody NecropsyRequest req) {
+        return vetService.createNecropsy(req);
+    }
+
+    @PostMapping("/flocks/{flockId}/withdrawal")
+    public void setWithdrawal(@PathVariable Long flockId, @RequestParam Integer days) {
+        vetService.setFlockWithdrawal(flockId, days);
+    }
+
     @GetMapping("/disease-cases")
     public ResponseEntity<ApiResponse<List<DiseaseCaseResponse>>> getDiseaseCases() {
         return ResponseEntity.ok(ApiResponse.success(vetService.getAllDiseaseCases()));
+    }
+
+    @GetMapping("/disease-cases/active")
+    public ResponseEntity<ApiResponse<List<DiseaseCaseResponse>>> getActiveDiseaseCases() {
+        return ResponseEntity.ok(ApiResponse.success(vetService.getActiveDiseaseCases()));
     }
 
     @GetMapping("/health-reports")
@@ -93,8 +129,17 @@ public class VeterinaryController {
     }
 
     @PatchMapping("/prescriptions/{id}/dispense")
-    @PreAuthorize("hasAnyRole('ADMIN','PHARMACY_SALES')")
+    @PreAuthorize("hasAnyRole('ADMIN','VETERINARY_OFFICER','STORE_KEEPER','PHARMACY_SALES')")
     public ResponseEntity<ApiResponse<PrescriptionResponse>> dispensePrescription(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success("Prescription dispensed", vetService.dispensePrescription(id)));
+    }
+
+    @GetMapping("/reports/drug-usage")
+    @PreAuthorize("hasAnyRole('ADMIN','VETERINARY_OFFICER','FARM_MANAGER')")
+    public ResponseEntity<ApiResponse<DrugUsageReportResponse>> getDrugUsageReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Long flockId) {
+        return ResponseEntity.ok(ApiResponse.success(reportService.generateDrugUsageReport(startDate, endDate, flockId)));
     }
 }

@@ -21,6 +21,42 @@ public class FarmService {
 
     private final FarmRepository farmRepository;
     private final UserRepository userRepository;
+    private final com.trustagro.farm.repository.BiosecurityProtocolRepository biosecurityRepo;
+
+    public List<com.trustagro.farm.dto.BiosecurityProtocolResponse> getBiosecurityLogs(Long farmId) {
+        return biosecurityRepo.findByFarmIdOrderByTimestampDesc(farmId).stream().map(this::toBiosecurityResponse).collect(Collectors.toList());
+    }
+
+    public com.trustagro.farm.dto.BiosecurityProtocolResponse logBiosecurity(com.trustagro.farm.dto.BiosecurityProtocolRequest req) {
+        com.trustagro.farm.entity.BiosecurityProtocol bp = new com.trustagro.farm.entity.BiosecurityProtocol();
+        bp.setFarm(findById(req.getFarmId()));
+        bp.setFootbathRefreshed(req.isFootbathRefreshed());
+        bp.setVehicularSpray(req.isVehicularSpray());
+        bp.setPpeWorn(req.isPpeWorn());
+        bp.setVisitorLogged(req.isVisitorLogged());
+        bp.setVehicleReg(req.getVehicleReg());
+        bp.setVisitorName(req.getVisitorName());
+        bp.setNotes(req.getNotes());
+        bp.setStaffSignature(req.getStaffSignature());
+        return toBiosecurityResponse(biosecurityRepo.save(bp));
+    }
+
+    private com.trustagro.farm.dto.BiosecurityProtocolResponse toBiosecurityResponse(com.trustagro.farm.entity.BiosecurityProtocol bp) {
+        com.trustagro.farm.dto.BiosecurityProtocolResponse r = new com.trustagro.farm.dto.BiosecurityProtocolResponse();
+        r.setId(bp.getId());
+        r.setFarmId(bp.getFarm().getId());
+        r.setFarmName(bp.getFarm().getFarmName());
+        r.setFootbathRefreshed(bp.isFootbathRefreshed());
+        r.setVehicularSpray(bp.isVehicularSpray());
+        r.setPpeWorn(bp.isPpeWorn());
+        r.setVisitorLogged(bp.isVisitorLogged());
+        r.setVehicleReg(bp.getVehicleReg());
+        r.setVisitorName(bp.getVisitorName());
+        r.setNotes(bp.getNotes());
+        r.setStaffSignature(bp.getStaffSignature());
+        r.setTimestamp(bp.getTimestamp());
+        return r;
+    }
 
     public List<FarmResponse> getAll() {
         return farmRepository.findAll().stream().map(this::toResponse).collect(Collectors.toList());

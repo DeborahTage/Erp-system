@@ -19,4 +19,8 @@ public interface StockBatchRepository extends JpaRepository<StockBatch, Long> {
 
     @Query("SELECT b FROM StockBatch b WHERE b.expiryDate IS NOT NULL AND b.expiryDate BETWEEN :today AND :warningDate AND b.quantityRemaining > 0")
     List<StockBatch> findExpiringBatches(@Param("today") LocalDate today, @Param("warningDate") LocalDate warningDate);
+
+    List<StockBatch> findByItemIdOrderByReceivedDateAsc(Long itemId);
+
+    List<StockBatch> findByExpiryDate(LocalDate expiryDate);
 }

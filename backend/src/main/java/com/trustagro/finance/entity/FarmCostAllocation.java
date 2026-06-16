@@ -35,4 +35,12 @@ public class FarmCostAllocation {
 
     @CreationTimestamp
     private LocalDateTime createdAt;
+
+    public void setCostType(FarmCostType costType) { this.costType = costType; }
+    public void setAmount(BigDecimal amount) { this.amount = amount; }
+    public void setReferenceType(String referenceType) { this.referenceType = referenceType; }
+    public void setReferenceId(Long referenceId) { this.referenceId = referenceId; }
+    public void setTransactionDate(LocalDate transactionDate) { this.transactionDate = transactionDate; }
+    public void setFlockId(Long flockId) { this.flockId = flockId; }
+    public void setFarmId(Long farmId) { this.farmId = farmId; }
 }

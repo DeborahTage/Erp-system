@@ -43,4 +43,23 @@ public class FarmVisit {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    public Long getId() { return id; }
+    public CrmClient getClient() { return client; }
+    public LocalDate getVisitDate() { return visitDate; }
+    public User getVisitedBy() { return visitedBy; }
+    public String getPurpose() { return purpose; }
+    public String getObservation() { return observation; }
+    public String getAdviceGiven() { return adviceGiven; }
+    public LocalDate getNextFollowUpDate() { return nextFollowUpDate; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public void setClient(CrmClient client) { this.client = client; }
+    public void setVisitDate(LocalDate visitDate) { this.visitDate = visitDate; }
+    public void setVisitedBy(User visitedBy) { this.visitedBy = visitedBy; }
+    public void setPurpose(String purpose) { this.purpose = purpose; }
+    public void setObservation(String observation) { this.observation = observation; }
+    public void setAdviceGiven(String adviceGiven) { this.adviceGiven = adviceGiven; }
+    public void setNextFollowUpDate(LocalDate nextFollowUpDate) { this.nextFollowUpDate = nextFollowUpDate; }
 }
